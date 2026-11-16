@@ -16,3 +16,9 @@ pytest-asyncio
 
 # Git hooks
 pre-commit
+
+bandit
+pip-audit
+detect-secrets
+import-linter
+xenon

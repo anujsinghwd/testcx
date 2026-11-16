@@ -1888,4 +1888,3 @@ The primary objective is to establish a reliable integration foundation that can
 - README.md – Developer Onboarding
 - integration_catalog.md – Integration Inventory
 - api_contracts/ – Integration API Specifications
-
