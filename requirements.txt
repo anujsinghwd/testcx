@@ -1,0 +1,15 @@
+
+# FastAPI
+fastapi
+uvicorn[standard]
+
+# Validation and configuration
+pydantic
+pydantic-settings
+
+# HTTP client for external integrations
+httpx
+
+# Azure integration - add if required by deployment
+azure-identity
+azure-keyvault-secrets
