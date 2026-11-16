@@ -1,6 +1,10 @@
 
 -r requirements.txt
 
+# Pre-commit
+pre-commit
+pre-commit-hooks
+
 # Code quality
 ruff
 mypy

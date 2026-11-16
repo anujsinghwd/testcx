@@ -1,0 +1,48 @@
+
+repos:
+  - repo: local
+    hooks:
+
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+        entry: trailing-whitespace-fixer
+        language: system
+        types: [text]
+
+      # Ensure files end with a newline
+      - id: end-of-file
+        name: Check end of file
+        entry: end-of-file-fixer
+        language: system
+        types: [text]
+
+      # Ruff linting
+      - id: ruff-check
+        name: Ruff lint
+        entry: ruff check --fix
+        language: system
+        types: [python]
+
+      # Ruff formatting
+      - id: ruff-format
+        name: Ruff format
+        entry: ruff format
+        language: system
+        types: [python]
+
+      # MyPy type checking
+      - id: mypy
+        name: MyPy type checking
+        entry: mypy app
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # Unit and integration tests
+      - id: pytest
+        name: Run automated tests
+        entry: pytest -q
+        language: system
+        pass_filenames: false
+        always_run: true
