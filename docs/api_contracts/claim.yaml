@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: Claim API Contract
+  version: 1.0.0
+  description: Claims Integration API contract. Details marked TBC where unconfirmed.
+
+paths:
+  /claims:
+    post:
+      summary: Create claim
+      description: Submit new claim instruction from CMS.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Claim creation payload (TBC)
+      responses:
+        "201":
+          description: Claim created successfully (TBC)
+        "400":
+          description: Invalid claim data
+
+  /claims/{id}:
+    get:
+      summary: Get claim detail
+      description: Retrieve claim details by identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Claim identifier
+      responses:
+        "200":
+          description: Claim detail response (TBC)
+        "404":
+          description: Claim not found
+

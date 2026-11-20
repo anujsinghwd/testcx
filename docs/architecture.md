@@ -188,6 +188,7 @@ xc/
 │   ├── api/
 │   │   ├── router.py
 │   │   └── v1/
+│   │       ├── health.py
 │   │       ├── policy.py
 │   │       ├── claims.py
 │   │       ├── payments.py
@@ -196,24 +197,26 @@ xc/
 │   │
 │   ├── core/
 │   │   ├── config.py
-│   │   ├── security.py
-│   │   ├── logger.py
+│   │   ├── error_handlers.py
 │   │   ├── exceptions.py
+│   │   ├── logger.py
 │   │   └── middleware.py
+│   │
+│   ├── data/
+│   │   └── mock_data.py
 │   │
 │   ├── dependencies/
 │   │   └── clients.py
 │   │
 │   ├── integrations/
-│   │   ├── five_sigma/
-│   │   │   ├── client.py
-│   │   │   └── auth.py
-│   │   ├── policy_system/
-│   │   │   └── client.py
-│   │   ├── payment_provider/
-│   │   │   └── client.py
-│   │   └── document_system/
-│   │       └── client.py
+│   │   ├── document_system/
+│   │   └── policy_system/
+│   │       ├── base.py
+│   │       ├── config.py
+│   │       ├── registry.py
+│   │       └── duck_creek/
+│   │           ├── adapter.py
+│   │           └── config.py
 │   │
 │   ├── mappers/
 │   │   ├── policy_mapper.py
@@ -221,6 +224,7 @@ xc/
 │   │   └── payment_mapper.py
 │   │
 │   ├── schemas/
+│   │   ├── errors.py
 │   │   ├── policy.py
 │   │   ├── claim.py
 │   │   ├── payment.py
@@ -242,18 +246,28 @@ xc/
 │   └── retry_scheduler.py
 │
 ├── timer_function/
+│   ├── function.json
+│   └── __init__.py
 │
 ├── tests/
 │   ├── unit/
+│   │   ├── test_health.py
+│   │   ├── test_policy.py
+│   │   ├── test_claim.py
+│   │   └── test_payment.py
 │   ├── integration/
-│   ├── fixtures/
+│   │   └── test_policy_api.py
 │   └── conftest.py
 │
 ├── docs/
 │   ├── architecture.md
 │   ├── integration_catalog.md
 │   └── api_contracts/
+│       ├── policy.yaml
+│       ├── claim.yaml
+│       └── payment.yaml
 │
+├── function_app.py
 ├── static/
 ├── logs/
 │
@@ -263,6 +277,8 @@ xc/
 ├── Dockerfile
 ├── pyproject.toml
 ├── requirements.txt
+├── requirements-dev.txt
+├── Understand.md
 └── README.md
 ```
 
@@ -373,12 +389,12 @@ External system response validation should also be implemented using dedicated m
 
 The service layer contains application-specific business orchestration.
 
-It coordinates integration clients, validators and mappers.
+It coordinates integration adapters, validators, and mappers independently of vendor-specific APIs.
 
 Responsibilities:
 
 - Execute business workflows.
-- Coordinate multiple external systems.
+- Coordinate external integration adapters.
 - Apply business rules.
 - Handle service-level errors.
 - Invoke mapping operations.
@@ -387,48 +403,39 @@ Responsibilities:
 Example:
 
 ```python
+from app.integrations.policy_system.base import PolicyAdapterBase
+
+
 class PolicyService:
-    def __init__(self, policy_client, policy_mapper):
-        self.policy_client = policy_client
-        self.policy_mapper = policy_mapper
+    def __init__(self, adapter: PolicyAdapterBase | None = None):
+        self.adapter = adapter
 
-    async def lookup_policy(self, policy_number: str):
-
-        response = await self.policy_client.get_policy(policy_number)
-
-        return self.policy_mapper.to_five_sigma(response)
+    async def get_policy(self, policy_id: str):
+        # Coordinates policy retrieval independently of Duck Creek or other PAS
+        pass
 ```
 
-The service layer should not depend on FastAPI-specific request or response objects.
+The service layer does not depend on FastAPI-specific request or response objects.
 
 This allows the same business logic to be reused by HTTP endpoints and scheduled jobs.
 
 ## 4.5 Integration Layer – app/integrations/
 
-This layer communicates with external systems.
+This layer communicates with external systems and applies the **Adapter Pattern** for Policy Administration System (PAS) integrations.
 
-Each external system should have an independent client.
+### Policy System Integration (Adapter Pattern) – `app/integrations/policy_system/`
 
-### Five Sigma Client
+The Policy Integration decouples the platform from vendor-specific PAS implementations:
 
-Responsible for:
+- **`PolicyAdapterBase` (`base.py`)**: Abstract base contract declaring standard operations:
+  - `search_policy(criteria)`
+  - `get_policy(policy_id)`
+  - `get_coverages(policy_id)`
+- **`PolicyAdapterRegistry` (`registry.py`)**: Central registry for dynamic registration and resolution of policy adapters.
+- **`DuckCreekAdapter` (`duck_creek/adapter.py`)**: Concrete adapter implementation for Duck Creek PAS.
+- **`DuckCreekConfigLoader` (`duck_creek/config.py`)**: Encapsulates Duck Creek connection settings, credentials, and timeouts.
 
-- Five Sigma API authentication.
-- Sending API requests.
-- Handling Five Sigma responses.
-- Managing API-specific headers.
-- Applying timeout and error handling.
-
-### Policy System Client
-
-Responsible for:
-
-- Calling BHSI Policy Administration APIs.
-- Retrieving policy information.
-- Handling policy API responses.
-- Managing authentication and connectivity.
-
-### Payment Provider Client
+### Payment Provider Client – `app/integrations/payment_provider/`
 
 Responsible for:
 
@@ -437,7 +444,7 @@ Responsible for:
 - Processing payment responses.
 - Handling provider-specific errors.
 
-### Document System Client
+### Document System Client – `app/integrations/document_system/`
 
 Responsible for:
 
@@ -954,40 +961,38 @@ Identify who owns:
 
 ### Business Objective
 
-Retrieve policy details from BHSI's Policy Administration System and make the information available to Five Sigma.
+Retrieve policy details from the Policy Administration System (PAS) using the Adapter Pattern (Duck Creek initial).
 
 ### Workflow
 
 ```mermaid
 sequenceDiagram
-    participant FS as Five Sigma
-    participant API as FastAPI
+    participant FS as External Caller / Five Sigma
+    participant API as FastAPI Router
     participant S as Policy Service
-    participant C as Policy API Client
-    participant PAS as BHSI Policy System
-    participant M as Policy Mapper
+    participant A as Policy Adapter Base
+    participant DC as Duck Creek Adapter
+    participant PAS as Duck Creek PAS / Mock Data
 
-    FS->>API: Policy Lookup Request
+    FS->>API: GET /policies/{id}
     API->>API: Validate Request
-    API->>S: Lookup Policy
-    S->>C: Call Policy API
-    C->>PAS: GET Policy Details
-    PAS-->>C: Policy Response
-    C-->>S: External Response
-    S->>M: Transform Data
-    M-->>S: Five Sigma Payload
-    S-->>API: Processed Response
-    API-->>FS: Return Result
+    API->>S: get_policy(policy_id)
+    S->>A: get_policy(policy_id)
+    A->>DC: get_policy(policy_id)
+    DC->>PAS: External Policy Query (TBC)
+    PAS-->>DC: Provider Response (TBC)
+    DC-->>S: Raw Policy Payload
+    S-->>API: PolicyResponse
+    API-->>FS: 200 OK (Confirmed Policy Response Fields)
 ```
 
 ### Responsibilities
 
-- FastAPI receives the policy request.
-- Pydantic validates the request.
-- Policy Service orchestrates the workflow.
-- Policy Client communicates with BHSI PAS.
-- Policy Mapper transforms the response.
-- The result is returned in the agreed Five Sigma format.
+- FastAPI receives the policy request (`/policies/search`, `/policies/{id}`, `/policies/{id}/coverages`).
+- Pydantic validates incoming search parameters or path parameters.
+- `PolicyService` orchestrates the policy workflow independently of vendor transport.
+- `DuckCreekAdapter` implements `PolicyAdapterBase` to communicate with Duck Creek PAS.
+- The result conforms to the confirmed policy response fields.
 
 ### Important Considerations
 
@@ -1195,32 +1200,35 @@ The application should use a centralized exception-handling strategy.
 | Business Error | Invalid claim state | Return business error |
 | Unexpected Error | Unhandled exception | Centralized HTTP 500 handling |
 
-## 12.2 Exception Structure
+## 12.2 Standardized Integration Error Codes
+
+The platform standardizes integration errors through domain exception classes defined in `app/core/exceptions.py`:
+
+| Error Code | Exception Class | HTTP Status | Description |
+|---|---|---|---|
+| `NOT_FOUND` | `PolicyNotFoundError` | 404 | Requested policy or coverage record does not exist |
+| `MULTIPLE_MATCHES` | `MultiplePoliciesFoundError` | 409 | Multiple matching records found where a unique record is required |
+| `MAPPING_ERROR` | `PolicyMappingError` | 502 | Provider response payload could not be mapped to canonical schema |
+| `PAS_UNAVAILABLE` | `PASUnavailableError` | 503 | External Policy Administration System is down or unreachable |
+| `TIMEOUT` | `PASTimeoutError` | 504 | External PAS request timed out |
+
+## 12.3 Exception Structure
 
 Recommended exception hierarchy:
 
 ```text
-ApplicationException
+BaseIntegrationError (app/core/exceptions.py)
 │
-├── ValidationException
-│
-├── AuthenticationException
-│
-├── AuthorizationException
-│
-├── BusinessException
-│
-├── IntegrationException
-│   ├── IntegrationTimeoutException
-│   ├── ExternalAPIException
-│   └── IntegrationMappingException
-│
-└── InternalServerException
+├── PolicyNotFoundError (NOT_FOUND - 404)
+├── MultiplePoliciesFoundError (MULTIPLE_MATCHES - 409)
+├── PASUnavailableError (PAS_UNAVAILABLE - 503)
+├── PASTimeoutError (TIMEOUT - 504)
+└── PolicyMappingError (MAPPING_ERROR - 502)
 ```
 
-The actual implementation should be aligned with existing shared framework exceptions.
+The actual implementation aligns with centralized error handlers in `app/core/error_handlers.py`.
 
-## 12.3 Retry Strategy
+## 12.4 Retry Strategy
 
 Retry should be applied only to appropriate transient failures.
 
