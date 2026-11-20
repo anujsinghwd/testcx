@@ -30,4 +30,3 @@ class PolicyAdapterBase(ABC):
         Implementation: TBC.
         """
         raise NotImplementedError
-

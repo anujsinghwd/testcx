@@ -1,593 +1,280 @@
-# Developer Setup Guide
+# 🚀 Developer Setup Guide
 
-This document explains how to set up the Five Sigma – BHSI Integration project on a new developer machine.
-
-**Primary OS:** Windows 10 / Windows 11
-**Shell:** PowerShell
-**Python:** 3.11+
-
-The setup process installs dependencies, configures the Python virtual environment, installs Git hooks and enables automated code-quality checks.
+Welcome to the **BHSI Integration Platform**! This guide is designed to get you up, running, and contributing code in less than 10 minutes.
 
 ---
 
-# 1. Prerequisites
+## ⚡ 5-Minute Quick Start (TL;DR)
 
-Install the following software before starting.
+If you already know Python and Git, here are the essential commands:
 
-| Software | Requirement |
-|---|---|
-| Python | 3.11 or higher |
-| Git | Latest stable version |
-| VS Code | Recommended |
-| PowerShell | Windows PowerShell 5.1+ or PowerShell 7+ |
-
-### Verify installations
-
-Open PowerShell and execute:
-
+### On Windows (PowerShell):
 ```powershell
-py --version
-git --version
-```
-
-Expected Python version:
-
-```text
-Python 3.11.x
-```
-
-If Python is not recognized, install Python and enable the option to add Python to PATH.
-
----
-
-# 2. Clone the Repository
-
-Open PowerShell and navigate to your development directory.
-
-```powershell
-cd C:\Projects
-```
-
-Clone the repository:
-
-```powershell
+# 1. Clone the repository and enter the directory
 git clone <repository-url>
-```
-
-Navigate into the project:
-
-```powershell
 cd xc
-```
 
-Replace `<repository-url>` with the actual repository URL.
-
----
-
-# 3. Python Virtual Environment Setup
-
-We use a virtual environment to isolate project dependencies from globally installed Python packages.
-
-### Create virtual environment
-
-```powershell
+# 2. Create and activate a Python 3.11+ virtual environment
 py -3.11 -m venv .venv
-```
-
-### Activate virtual environment
-
-```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass   # If script execution is blocked
 .\.venv\Scripts\Activate.ps1
-```
 
-If PowerShell blocks script execution, run:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Then activate again:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-This execution policy change applies only to the current PowerShell session.
-
-### Verify activation
-
-Your terminal should show:
-
-```text
-(.venv) PS C:\Projects\xc>
-```
-
----
-
-# 4. Install Project Dependencies
-
-Upgrade pip:
-
-```powershell
+# 3. Upgrade pip and install dependencies
 python -m pip install --upgrade pip
-```
-
-Install application dependencies:
-
-```powershell
 pip install -r requirements.txt
-```
-
-Install development dependencies:
-
-```powershell
 pip install -r requirements-dev.txt
-```
 
-Development dependencies include tools such as:
-
-- Ruff
-- MyPy
-- Pytest
-- Pytest Coverage
-- Pre-commit
-- Bandit
-- pip-audit
-- Detect Secrets
-- Import Linter
-
----
-
-# 5. Environment Configuration
-
-Create your local environment file.
-
-```powershell
+# 4. Create your local environment configuration
 Copy-Item .env.example .env
-```
 
-Update `.env` with the configuration values provided through the team's approved secure channel.
-
-Example:
-
-```env
-APP_NAME=Five Sigma BHSI Integration
-ENVIRONMENT=development
-
-FIVE_SIGMA_BASE_URL=
-FIVE_SIGMA_API_KEY=
-
-POLICY_API_URL=
-POLICY_API_KEY=
-```
-
-Important:
-
-- Never commit `.env`.
-- Never put API keys or passwords in source code.
-- Use `.env.example` for variable names and safe placeholder values.
-- Obtain credentials through the approved team process.
-
----
-
-# 6. Configure Pre-commit Hooks
-
-Pre-commit automatically runs configured quality checks before a Git commit is created.
-
-The repository contains:
-
-```text
-.pre-commit-config.yaml
-.secrets.baseline
-```
-
-These files should already be committed to Git.
-
-### Install Git hooks
-
-```powershell
+# 5. Install Git pre-commit hooks
 pre-commit install
-```
 
-### Run all checks manually
-
-```powershell
-pre-commit run --all-files
-```
-
-### Checks configured in the project
-
-| Check | Purpose |
-|---|---|
-| Trailing whitespace | Removes unnecessary spaces |
-| End-of-file fixer | Ensures correct file endings |
-| YAML validation | Checks YAML syntax |
-| TOML validation | Checks TOML syntax |
-| Merge conflict check | Detects unresolved merge markers |
-| Ruff | Python linting |
-| Ruff Format | Python formatting |
-| Detect Secrets | Detects possible exposed credentials |
-
-Additional MyPy and Pytest checks may also be configured as local hooks.
-
-### Important
-
-Do not regenerate `.secrets.baseline` automatically during every developer setup.
-
-The baseline is a shared, reviewed file. If a new secret is detected, investigate it before updating the baseline.
-
----
-
-# 7. Run Quality Checks Manually
-
-The following commands can be used during development.
-
-### Ruff linting
-
-```powershell
-ruff check .
-```
-
-Automatically fix supported issues:
-
-```powershell
-ruff check . --fix
-```
-
-### Ruff formatting
-
-```powershell
-ruff format .
-```
-
-Check formatting without modifying files:
-
-```powershell
-ruff format . --check
-```
-
-### MyPy type checking
-
-```powershell
-mypy app
-```
-
-### Run unit and integration tests
-
-```powershell
-pytest -v
-```
-
-### Run tests with coverage
-
-```powershell
-pytest --cov=app --cov-report=term-missing
-```
-
-### Security checks
-
-```powershell
-bandit -r app
-pip-audit
-```
-
-### Architecture checks
-
-```powershell
-lint-imports
-```
-
----
-
-# 8. Running the FastAPI Application
-
-Make sure the virtual environment is activated.
-
-Start the development server:
-
-```powershell
+# 6. Start the API server
 uvicorn app.main:app --reload
 ```
 
-Application:
-
-```text
-http://127.0.0.1:8000
-```
-
-Swagger API documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Health endpoint:
-
-```text
-http://127.0.0.1:8000/health
-```
-
-Versioned health endpoint:
-
-```text
-http://127.0.0.1:8000/api/v1/health
-```
-
----
-
-# 9. Daily Developer Workflow
-
-Follow this workflow during development.
-
-### Step 1: Activate virtual environment
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### Step 2: Create or switch to your feature branch
-
-```powershell
-git checkout -b feature/policy-integration
-```
-
-### Step 3: Write code
-
-Implement the required functionality.
-
-### Step 4: Run tests
-
-```powershell
-pytest -v
-```
-
-### Step 5: Run quality checks
-
-```powershell
-pre-commit run --all-files
-```
-
-### Step 6: Stage changes
-
-```powershell
-git add .
-```
-
-### Step 7: Commit changes
-
-```powershell
-git commit -m "Add policy integration"
-```
-
-Pre-commit hooks automatically execute configured checks during the commit.
-
-If a check fails:
-
-1. Review the error.
-2. Fix the issue.
-3. Stage the updated files again.
-4. Retry the commit.
-
-### Step 8: Push your branch
-
-```powershell
-git push -u origin feature/policy-integration
-```
-
-### Step 9: Create a Pull Request
-
-Create a PR against the target development branch.
-
-GitHub Actions should run the mandatory CI checks before merging.
-
----
-
-# 10. Common Windows Troubleshooting
-
-### Issue 1: Python is not recognized
-
-Error:
-
-```text
-py is not recognized
-```
-
-Solution:
-
-- Install Python 3.11 or later.
-- Enable Python PATH configuration.
-- Restart PowerShell.
-- Verify using `py --version`.
-
-### Issue 2: PowerShell blocks activation
-
-Error:
-
-```text
-running scripts is disabled on this system
-```
-
-Solution:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Then:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### Issue 3: Pre-commit command not found
-
-Solution:
-
-```powershell
-python -m pip install pre-commit
-```
-
-Then:
-
-```powershell
-pre-commit install
-```
-
-### Issue 4: Detect Secrets baseline missing
-
-Error:
-
-```text
-Invalid path: .secrets.baseline
-```
-
-Check whether the file exists:
-
-```powershell
-Test-Path .secrets.baseline
-```
-
-If it does not exist, check with the repository maintainer before generating or replacing the shared baseline.
-
-### Issue 5: Dependencies are inconsistent
-
-Reinstall development dependencies:
-
-```powershell
-python -m pip install --upgrade -r requirements-dev.txt
-```
-
-### Issue 6: Tests fail because of environment configuration
-
-Verify:
-
-- `.env` exists.
-- Required environment variables are configured.
-- The correct Python virtual environment is active.
-- Required external service credentials are available.
-
----
-
-# 11. Windows Command Prompt Alternative
-
-If using CMD instead of PowerShell:
-
-Create the virtual environment:
-
-```cmd
-py -3.11 -m venv .venv
-```
-
-Activate:
-
-```cmd
-.venv\Scripts\activate.bat
-```
-
-Install dependencies:
-
-```cmd
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-```
-
-Install hooks:
-
-```cmd
-pre-commit install
-```
-
-Run tests:
-
-```cmd
-pytest -v
-```
-
----
-
-# 12. macOS / Linux Setup
-
-For developers using macOS or Linux:
-
-Create the virtual environment:
-
+### On macOS / Linux (Terminal):
 ```bash
+# 1. Clone the repository and enter the directory
+git clone <repository-url>
+cd xc
+
+# 2. Create and activate a Python 3.11+ virtual environment
 python3 -m venv .venv
-```
-
-Activate:
-
-```bash
 source .venv/bin/activate
+
+# 3. Upgrade pip and install dependencies
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# 4. Create your local environment configuration
+cp .env.example .env
+
+# 5. Install Git pre-commit hooks
+pre-commit install
+
+# 6. Start the API server
+uvicorn app.main:app --reload
 ```
 
-Install dependencies:
+Open your browser to [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) — if you see Swagger UI, you are ready to code! 🎉
 
+---
+
+## 📋 Prerequisites Check
+
+Make sure you have the following installed on your machine before proceeding:
+
+| Tool | Minimum Version | How to verify in your terminal |
+|---|---|---|
+| **Python** | `3.11+` | `python --version` or `py --version` |
+| **Git** | Latest stable | `git --version` |
+| **VS Code** | Recommended editor | Download from [code.visualstudio.com](https://code.visualstudio.com/) |
+
+> 💡 **Recommended VS Code Extensions:**
+> - **Python** (by Microsoft)
+> - **Pylance** (for IntelliSense and type checking)
+> - **Ruff** (for automatic formatting and linting on save)
+
+---
+
+## 🛠️ Step-by-Step Walkthrough
+
+### Step 1: Why a Virtual Environment (`.venv`)?
+In Python, packages installed globally can conflict between different projects. A virtual environment is an isolated sandbox dedicated strictly to this project.
+
+1. **Create the environment:**
+   - **Windows:** `py -3.11 -m venv .venv`
+   - **macOS/Linux:** `python3 -m venv .venv`
+2. **Activate the environment:**
+   - **Windows PowerShell:** `.\.venv\Scripts\Activate.ps1`
+   - **macOS/Linux:** `source .venv/bin/activate`
+
+> 🎯 **Success Check:**
+> Your terminal prompt should now have `(.venv)` at the beginning, like this:
+> ```text
+> (.venv) PS C:\Projects\xc>
+> ```
+
+---
+
+### Step 2: Install Project Dependencies
+
+We separate dependencies into two files:
+- **`requirements.txt`**: Packages needed to run the application (FastAPI, Pydantic, HTTPX, Uvicorn).
+- **`requirements-dev.txt`**: Tools needed for development, testing, and formatting (Pytest, Ruff, MyPy, Pre-commit).
+
+Run these commands inside your activated virtual environment:
 ```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-Install Git hooks:
+---
 
+### Step 3: Local Configuration (`.env`)
+
+The application loads environment variables (like API keys, URLs, and environments) from a local `.env` file.
+
+1. Copy the template to create your `.env` file:
+   - **Windows:** `Copy-Item .env.example .env`
+   - **macOS/Linux:** `cp .env.example .env`
+2. Open `.env` in VS Code. It will look like this:
+   ```env
+   APP_NAME=BHSI Integration
+   ENVIRONMENT=development
+
+   DUCK_CREEK_BASE_URL=TBC
+   DUCK_CREEK_API_KEY=TBC
+   ```
+> ⚠️ **Important Security Rule:**
+> **Never commit your `.env` file to Git!** It is included in `.gitignore` to protect real credentials and secrets from leaking into GitHub.
+
+---
+
+### Step 4: Install Pre-commit Hooks
+
+Pre-commit runs automated code checks (like formatting and syntax checks) **automatically every time you run `git commit`**. This prevents broken code from being pushed to GitHub.
+
+Run:
 ```bash
 pre-commit install
 ```
 
-Run checks:
-
+Test that all hooks pass right now:
 ```bash
 pre-commit run --all-files
 ```
 
 ---
 
-# 13. Git and Quality Rules
+## 🏃 Running the Application
 
-Every developer must follow these rules:
+Start the local development server with auto-reload enabled (the server automatically restarts whenever you save a file):
 
-1. Always work on a feature branch.
-2. Never commit `.env` or credentials.
-3. Do not bypass pre-commit checks using `--no-verify`.
-4. Fix linting and formatting issues before creating a PR.
-5. Add unit tests for new business logic.
-6. Run relevant tests before pushing.
-7. Keep integration clients and business logic separated.
-8. Follow the existing project architecture.
-9. Update documentation when introducing new integrations.
-10. Ensure mandatory GitHub Actions checks pass before merging.
+```bash
+uvicorn app.main:app --reload
+```
 
----
+### 🔍 Interactive URLs to Test:
+- **Interactive API Documentation (Swagger UI):**
+  👉 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+  *(You can test all endpoints directly from this interactive web page!)*
+- **Alternative API Documentation (ReDoc):**
+  👉 [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **Application Health Check:**
+  👉 [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) — returns `{"status": "healthy"}`
+- **Versioned API Health Check:**
+  👉 [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
 
-# 14. Quick Setup Checklist
-
-Use this checklist when onboarding a new developer.
-
-- [ ] Python 3.11+ installed
-- [ ] Git installed
-- [ ] Repository cloned
-- [ ] Project virtual environment created
-- [ ] Virtual environment activated
-- [ ] Runtime dependencies installed
-- [ ] Development dependencies installed
-- [ ] `.env` created and configured
-- [ ] `.pre-commit-config.yaml` available
-- [ ] `.secrets.baseline` available
-- [ ] Git pre-commit hooks installed
-- [ ] Initial quality checks passed
-- [ ] Unit tests executed successfully
-- [ ] FastAPI application starts successfully
+Press `Ctrl + C` in your terminal anytime to stop the server.
 
 ---
 
-## Final Note
+## 🧪 Testing & Code Quality Cheat Sheet
 
-The purpose of this setup process is to ensure every developer follows the same development standards, regardless of their operating system.
+Before committing or submitting a pull request, run these commands to make sure your code meets all project standards:
 
-Windows developers should primarily use the PowerShell commands in this document.
+| Task | Command | What it does |
+|---|---|---|
+| **Run All Tests** | `pytest` | Runs all unit and integration tests |
+| **Check Code Formatting** | `ruff format --check .` | Checks if your code follows formatting rules |
+| **Auto-Fix Code Formatting** | `ruff format .` | Automatically formats all your files cleanly |
+| **Lint Code for Errors** | `ruff check .` | Finds unused imports, syntax errors, and style issues |
+| **Auto-Fix Lint Errors** | `ruff check . --fix` | Automatically fixes common linting issues |
+| **Static Type Checking** | `mypy app tests` | Verifies Python type annotations (strict mode) |
+| **Run All Pre-Commit Checks** | `pre-commit run --all-files` | Runs all configured checks at once |
 
-Pre-commit provides local code-quality validation, while GitHub Actions provides centralized CI validation before code is merged.
+> 💡 **Pro-Tip:** If your commit fails due to a formatting error, run `ruff format . && ruff check . --fix`, then stage the files with `git add .` and commit again!
 
-**Every developer should complete this setup before starting development.**
+---
+
+## 🔄 Daily Developer Workflow
+
+Here is the recommended workflow for developing a new feature or fix:
+
+```mermaid
+flowchart LR
+    A["1. Activate .venv"] --> B["2. git checkout -b feature/xyz"]
+    B --> C["3. Write Code & Tests"]
+    C --> D["4. pytest & ruff check"]
+    D --> E["5. git commit & push"]
+    E --> F["6. Open Pull Request"]
+```
+
+1. **Activate your environment:**
+   - Windows: `.\.venv\Scripts\Activate.ps1`
+   - Mac/Linux: `source .venv/bin/activate`
+2. **Create a fresh feature branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Write your code:** Make your changes and add tests in `tests/`.
+4. **Verify quality locally:**
+   ```bash
+   pytest
+   ruff check .
+   ruff format --check .
+   mypy app tests
+   ```
+5. **Commit your changes:**
+   ```bash
+   git add .
+   git commit -m "Add policy adapter registry skeleton"
+   ```
+6. **Push and create a Pull Request (PR):**
+   ```bash
+   git push -u origin feature/your-feature-name
+   ```
+
+---
+
+## ❓ Common Gotchas & Troubleshooting
+
+### 1. Error: `running scripts is disabled on this system` (Windows)
+- **Why it happens:** Windows PowerShell has a security policy restricting script execution by default.
+- **How to fix it:** Run this command in your PowerShell window:
+  ```powershell
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  ```
+  Then activate your `.venv` again.
+
+---
+
+### 2. Error: `py` or `python` is not recognized
+- **Why it happens:** Python was installed without checking the "Add Python to PATH" box.
+- **How to fix it:**
+  1. Re-run the Python installer.
+  2. Select **Modify**.
+  3. Ensure **"Add Python to environment variables / PATH"** is checked and complete the install.
+  4. Restart your terminal.
+
+---
+
+### 3. Error: `Address already in use` (Port 8000)
+- **Why it happens:** An old server process is still running on port 8000.
+- **How to fix it:**
+  - Either start Uvicorn on a different port:
+    ```bash
+    uvicorn app.main:app --reload --port 8080
+    ```
+  - Or terminate the existing process using port 8000.
+
+---
+
+### 4. How do I know if my virtual environment is working?
+Run:
+```bash
+python -c "import sys; print(sys.prefix)"
+```
+If the output ends with `.venv`, your virtual environment is active and working properly!
+
+---
+
+## 🤝 Need Help?
+- Check [Understand.md](file:///Users/anujsingh/Documents/xc/Understand.md) for a plain-English explanation of the project architecture and layers.
+- Check [README.md](file:///Users/anujsingh/Documents/xc/README.md) for endpoint details and project specifications.
+- Reach out to your team lead or senior backend buddy if you run into any blockers!

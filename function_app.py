@@ -28,4 +28,3 @@ def policy_coverage_trigger(*args: Any, **kwargs: Any) -> Any:
     Implementation: TBC.
     """
     pass
-

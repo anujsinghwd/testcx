@@ -15,4 +15,3 @@ class PolicySystemConfigLoader:
         Configuration details: TBC.
         """
         return {}
-

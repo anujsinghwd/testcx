@@ -19,4 +19,3 @@ class DuckCreekConfigLoader:
             "api_key": "TBC",
             "timeout_seconds": "TBC",
         }
-

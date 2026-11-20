@@ -35,4 +35,3 @@ class DuckCreekAdapter(PolicyAdapterBase):
         Implementation: TBC.
         """
         raise NotImplementedError
-

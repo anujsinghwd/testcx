@@ -24,4 +24,3 @@ class PolicyAdapterRegistry:
         Implementation: TBC.
         """
         raise NotImplementedError
-
