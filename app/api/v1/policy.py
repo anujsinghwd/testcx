@@ -1,77 +1,50 @@
-from typing import Annotated
+"""Policy API route definitions (structure and function signatures only)."""
 
-from fastapi import APIRouter, Depends, status
+from typing import Any
 
-from app.dependencies.clients import get_policy_service
-from app.schemas.errors import ErrorResponse
-from app.schemas.policy import (
-    PolicyCoveragesResponse,
-    PolicyDetailResponse,
-    PolicySearchRequest,
-    PolicySearchResponse,
-)
-from app.services.policy_service import PolicyService
+from fastapi import APIRouter
+
+from app.schemas.policy import CoverageResponse, PolicyResponse, PolicySearchRequest
 
 router = APIRouter()
 
 
 @router.post(
     "/search",
-    response_model=PolicySearchResponse,
-    status_code=status.HTTP_200_OK,
     summary="Search policies",
-    description="Search for policies in Five Sigma matching query parameters.",
-    responses={
-        404: {"model": ErrorResponse, "description": "No policy found"},
-        409: {"model": ErrorResponse, "description": "Multiple matches found"},
-        502: {"model": ErrorResponse, "description": "Mapping error"},
-        503: {"model": ErrorResponse, "description": "PAS unavailable"},
-        504: {"model": ErrorResponse, "description": "PAS timeout"},
-    },
+    description="Search for policies matching criteria. Processing: TBC.",
 )
-async def search_policies(
-    criteria: PolicySearchRequest,
-    service: Annotated[PolicyService, Depends(get_policy_service)],
-) -> PolicySearchResponse:
-    return await service.search_policies(criteria)
+async def search_policies(request: PolicySearchRequest | None = None) -> Any:
+    """Route definition for policy search.
+
+    Implementation: TBC.
+    """
+    pass
 
 
 @router.get(
     "/{id}",
-    response_model=PolicyDetailResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=PolicyResponse,
     summary="Get policy detail",
-    description="Retrieve comprehensive details for a specific policy by policy number.",
-    responses={
-        404: {"model": ErrorResponse, "description": "Policy not found"},
-        409: {"model": ErrorResponse, "description": "Multiple matches found"},
-        502: {"model": ErrorResponse, "description": "Mapping error"},
-        503: {"model": ErrorResponse, "description": "PAS unavailable"},
-        504: {"model": ErrorResponse, "description": "PAS timeout"},
-    },
+    description="Retrieve details for a specific policy. Processing: TBC.",
 )
-async def get_policy_detail(
-    id: str,
-    service: Annotated[PolicyService, Depends(get_policy_service)],
-) -> PolicyDetailResponse:
-    return await service.get_policy_detail(policy_id=id)
+async def get_policy(id: str) -> Any:
+    """Route definition for policy detail retrieval.
+
+    Implementation: TBC.
+    """
+    pass
 
 
 @router.get(
     "/{id}/coverages",
-    response_model=PolicyCoveragesResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=CoverageResponse,
     summary="Get policy coverages",
-    description="Retrieve coverages and limits for a specific policy.",
-    responses={
-        404: {"model": ErrorResponse, "description": "Policy coverages not found"},
-        502: {"model": ErrorResponse, "description": "Mapping error"},
-        503: {"model": ErrorResponse, "description": "PAS unavailable"},
-        504: {"model": ErrorResponse, "description": "PAS timeout"},
-    },
+    description="Retrieve coverages for a specific policy. Processing: TBC.",
 )
-async def get_policy_coverages(
-    id: str,
-    service: Annotated[PolicyService, Depends(get_policy_service)],
-) -> PolicyCoveragesResponse:
-    return await service.get_policy_coverages(policy_id=id)
+async def get_coverages(id: str) -> Any:
+    """Route definition for coverage retrieval.
+
+    Implementation: TBC.
+    """
+    pass

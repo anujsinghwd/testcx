@@ -1,21 +1,23 @@
+"""Application configuration settings."""
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Five Sigma BHSI Integration"
+    app_name: str = "BHSI Integration"
     environment: str = "development"
 
-    # Five Sigma API configuration
-    five_sigma_base_url: str = Field(
-        default="",
-        alias="FIVE_SIGMA_BASE_URL",
-        description="Base URL for Five Sigma API",
+    # Duck Creek API configuration - details TBC
+    duck_creek_base_url: str = Field(
+        default="TBC",
+        alias="DUCK_CREEK_BASE_URL",
+        description="Base URL for Duck Creek API (TBC)",
     )
-    five_sigma_api_key: str = Field(
-        default="",
-        alias="FIVE_SIGMA_API_KEY",
-        description="API Key for Five Sigma API",
+    duck_creek_api_key: str = Field(
+        default="TBC",
+        alias="DUCK_CREEK_API_KEY",
+        description="API Key for Duck Creek API (TBC)",
     )
 
     model_config = SettingsConfigDict(

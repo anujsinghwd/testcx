@@ -1,24 +1,20 @@
+"""Dependency injection providers for clients, adapters, and services."""
+
 from functools import lru_cache
 
-from app.integrations.five_sigma.client import FiveSigmaClient
-from app.services.policy_service import (
-    PolicyClientProtocol,
-    PolicyService,
-)
+from app.integrations.policy_system.base import PolicyAdapterBase
+from app.integrations.policy_system.duck_creek.adapter import DuckCreekAdapter
+from app.services.policy_service import PolicyService
 
 
 @lru_cache
-def get_policy_client() -> PolicyClientProtocol:
-    """Provides the active policy system client (Five Sigma initially, flexible for future providers)."""
-    return FiveSigmaClient()
-
-
-# Backward-compatible alias
-get_five_sigma_client = get_policy_client
+def get_policy_adapter() -> PolicyAdapterBase:
+    """Provides active policy system adapter (Duck Creek initial)."""
+    return DuckCreekAdapter()
 
 
 def get_policy_service() -> PolicyService:
-    """Provides PolicyService dependency with injected provider client."""
+    """Provides PolicyService dependency with injected adapter."""
     return PolicyService(
-        client=get_policy_client(),
+        adapter=get_policy_adapter(),
     )

@@ -1,0 +1,123 @@
+openapi: 3.0.3
+info:
+  title: Policy API Contract
+  version: 1.0.0
+  description: Policy Integration API contract (Adapter Pattern - Duck Creek initial). Details marked TBC where unconfirmed.
+
+paths:
+  /policies/search:
+    post:
+      summary: Search policies
+      description: Search policies based on criteria (TBC).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Search criteria (TBC)
+      responses:
+        "200":
+          description: Search results (TBC)
+
+  /policies/{id}:
+    get:
+      summary: Get policy detail
+      description: Retrieve details for a specific policy.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Policy identifier
+      responses:
+        "200":
+          description: Policy detail response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyResponse"
+
+  /policies/{id}/coverages:
+    get:
+      summary: Get policy coverages
+      description: Retrieve coverage details for a specific policy.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Policy identifier
+      responses:
+        "200":
+          description: Coverage details response (TBC)
+
+components:
+  schemas:
+    PolicyResponse:
+      type: object
+      description: Policy response using strictly confirmed fields (types and property names TBC)
+      properties:
+        Policy Number:
+          type: string
+          description: TBC
+        Effective Date:
+          type: string
+          description: TBC
+        Expiration Date:
+          type: string
+          description: TBC
+        Currency:
+          type: string
+          description: TBC
+        Policy State:
+          type: string
+          description: TBC
+        Policy Holder Company:
+          type: string
+          description: TBC
+        UW Region:
+          type: string
+          description: TBC
+        Writing Company:
+          type: string
+          description: TBC
+        Booked As Value:
+          type: string
+          description: TBC
+        Product Line/UW Area:
+          type: string
+          description: TBC
+        Product Line Subtype:
+          type: string
+          description: TBC
+        Section Code Name:
+          type: string
+          description: TBC
+        ASL:
+          type: string
+          description: TBC
+        Class Code (ISO):
+          type: string
+          description: TBC
+        Subline (ISO):
+          type: string
+          description: TBC
+        Deductible Codes (ISO):
+          type: string
+          description: TBC
+        Primary Involved Location Detail (ISO):
+          type: string
+          description: TBC
+        Coverage/Exposure:
+          type: string
+          description: TBC
+        Limits, Retentions:
+          type: string
+          description: TBC
+        Dates, Retro Tail:
+          type: string
+          description: TBC
+

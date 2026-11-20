@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.router import api_router
+from app.api.v1.policy import router as policy_router
 from app.core.config import settings
 from app.core.error_handlers import register_error_handlers
 from app.core.logger import setup_logging
@@ -21,6 +22,7 @@ register_error_handlers(app)
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(policy_router, prefix="/policies", tags=["Policies"])
 
 
 @app.get("/health", tags=["Health"])
