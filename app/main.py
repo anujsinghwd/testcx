@@ -2,12 +2,24 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.error_handlers import register_error_handlers
+from app.core.logger import setup_logging
+from app.core.middleware import CorrelationIdMiddleware
+
+setup_logging()
 
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
 )
 
+# Register middlewares
+app.add_middleware(CorrelationIdMiddleware)
+
+# Register centralized error handlers
+register_error_handlers(app)
+
+# Include API router
 app.include_router(api_router, prefix="/api/v1")
 
 

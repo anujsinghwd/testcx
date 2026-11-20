@@ -357,7 +357,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PolicyRequest(BaseModel):
-
     model_config = ConfigDict(extra="forbid")
 
     policy_number: str = Field(
@@ -389,20 +388,15 @@ Example:
 
 ```python
 class PolicyService:
-
     def __init__(self, policy_client, policy_mapper):
         self.policy_client = policy_client
         self.policy_mapper = policy_mapper
 
     async def lookup_policy(self, policy_number: str):
 
-        response = await self.policy_client.get_policy(
-            policy_number
-        )
+        response = await self.policy_client.get_policy(policy_number)
 
-        return self.policy_mapper.to_five_sigma(
-            response
-        )
+        return self.policy_mapper.to_five_sigma(response)
 ```
 
 The service layer should not depend on FastAPI-specific request or response objects.

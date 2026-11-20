@@ -1,0 +1,18 @@
+{
+  "policyNumber": "POL12345",
+  "customerId": "CUST001",
+  "insuredName": "John Smith",
+  "policyStatus": "Active",
+  "effectiveDate": "2026-01-01",
+  "expirationDate": "2026-12-31",
+  "subOrganization": "ORGCA",
+  "lineOfBusiness": "Auto",
+  "vin": "VIN123456789",
+  "holder": {
+    "customerId": "CUST001",
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@test.com",
+    "phoneNumber": "9999999999"
+  }
+}
