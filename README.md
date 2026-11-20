@@ -1,5 +1,9 @@
 # Five Sigma – BHSI Integration Platform
 
+> 📚 **Documentation Links:**
+> - 🚀 **[Developer Setup Guide](setup.md)**: 5-minute setup, virtual environment, and daily commands.
+> - 🧠 **[Architecture & Understanding Guide](Understand.md)**: Plain-English explanation of layers, the Adapter Pattern, and workflows.
+
 ## 1. Project Overview
 
 ### Introduction
@@ -278,3 +282,13 @@ The repository currently contains the **structural skeleton and signatures only*
 # Run Pytest suite
 ./.venv/bin/pytest
 ```
+
+---
+
+## 11. Documentation & Guides
+
+- 🚀 **[Developer Setup Guide](setup.md)**: Easy onboarding guide for setting up Python virtual environments, pre-commit hooks, and troubleshooting.
+- 🧠 **[Architecture & Understanding Guide (Understand.md)](Understand.md)**: Deep dive into the modular architecture, Adapter Pattern, Duck Creek integration, and layer responsibilities.
+- 📋 **[Policy API Contract (OpenAPI)](docs/api_contracts/policy.yaml)**: OpenAPI 3.0 specification for policy endpoints.
+- 🏗️ **[Technical Architecture Document](docs/architecture.md)**: Full platform technical architecture documentation.
+
