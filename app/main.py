@@ -20,6 +20,6 @@ app.add_middleware(CorrelationIdMiddleware)
 # Register centralized error handlers
 register_error_handlers(app)
 
-# Include API router (mounted at both /api/v1/policies and /policies)
-app.include_router(api_router, prefix="/api/v1")
+# Include API router: canonical contract endpoints at /policies; /api/v1 kept for backward compatibility (hidden from Swagger)
+app.include_router(api_router, prefix="/api/v1", include_in_schema=False)
 app.include_router(policy_router, prefix="/policies", tags=["Policies"])
