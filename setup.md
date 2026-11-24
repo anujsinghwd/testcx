@@ -27,10 +27,15 @@ pip install -r requirements-dev.txt
 # 4. Create your local environment configuration
 Copy-Item .env.example .env
 
-# 5. Install Git pre-commit hooks
+# 5. Create database, tables, and seed mock data
+python scripts/init_mysql_db.py
+alembic upgrade head
+# (Or run .\scripts\setup.ps1 to do all setup and database initialization automatically!)
+
+# 6. Install Git pre-commit hooks
 pre-commit install
 
-# 6. Start the API server
+# 7. Start the API server
 uvicorn app.main:app --reload
 ```
 
@@ -52,10 +57,15 @@ pip install -r requirements-dev.txt
 # 4. Create your local environment configuration
 cp .env.example .env
 
-# 5. Install Git pre-commit hooks
+# 5. Create database, tables, and seed mock data
+python scripts/init_mysql_db.py
+alembic upgrade head
+# (Or run ./scripts/setup.sh to do all setup and database initialization automatically!)
+
+# 6. Install Git pre-commit hooks
 pre-commit install
 
-# 6. Start the API server
+# 7. Start the API server
 uvicorn app.main:app --reload
 ```
 
