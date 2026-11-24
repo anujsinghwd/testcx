@@ -3,6 +3,10 @@
 import argparse
 import logging
 import sys
+from pathlib import Path
+
+# Ensure project root is in sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.config import settings
 from app.database.connection import get_engine, init_db

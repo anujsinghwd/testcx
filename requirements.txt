@@ -6,6 +6,7 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 
-# Database (MySQL & SQLAlchemy ORM)
+# Database (MySQL, SQLAlchemy ORM & Alembic)
 sqlalchemy>=2.0.0
 pymysql>=1.1.0
+alembic>=1.13.0

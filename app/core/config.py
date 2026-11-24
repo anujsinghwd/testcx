@@ -32,7 +32,7 @@ class Settings(BaseSettings):
         description="MySQL server port",
     )
     mysql_database: str = Field(
-        default="policy_db",
+        default="policy_integration",
         alias="MYSQL_DATABASE",
         description="MySQL database name for Policy Integration",
     )

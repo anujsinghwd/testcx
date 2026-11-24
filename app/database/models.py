@@ -19,7 +19,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, synonym
 
 
 class Base(DeclarativeBase):
@@ -39,7 +39,8 @@ class PolicyModel(Base):
     policy_number: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     lob: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
     org_external_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    suborg_external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sub_organization_external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    suborg_external_id = synonym("sub_organization_external_id")
     effective_date: Mapped[str] = mapped_column(String(32), nullable=False)
     expiration_date: Mapped[str] = mapped_column(String(32), nullable=False)
     policy_holder_contact_ref_id: Mapped[str] = mapped_column(String(64), nullable=False)

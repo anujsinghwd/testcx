@@ -121,7 +121,7 @@ class MySQLPolicyRepository(PolicySource):
                     policy_number=policy.policy_number,
                     lob=policy.lob,
                     org_external_id=org_external_id,
-                    suborg_external_id=policy.sub_organization_external_id,
+                    sub_organization_external_id=policy.sub_organization_external_id,
                     effective_date=policy.effective_date,
                     expiration_date=policy.expiration_date,
                     policy_holder_contact_ref_id=policy.policy_holder_contact_ref_id,
@@ -209,7 +209,9 @@ class MySQLPolicyRepository(PolicySource):
                     PolicyModel.org_external_id == org_external_id,
                 )
                 if suborg_external_id:
-                    stmt = stmt.where(PolicyModel.suborg_external_id == suborg_external_id)
+                    stmt = stmt.where(
+                        PolicyModel.sub_organization_external_id == suborg_external_id
+                    )
 
                 policies = list(session.scalars(stmt).all())
 
