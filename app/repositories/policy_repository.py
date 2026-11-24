@@ -9,7 +9,7 @@ from sqlalchemy import Engine, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.exceptions import DatabaseError
+from app.core.exceptions import DatabaseError, PolicyNotFoundError
 from app.data.mock_data import APPROVED_MOCK_POLICIES, DEFAULT_DISPLAY_SCHEMA
 from app.database.connection import get_engine, get_session_factory, init_db
 from app.database.models import (
@@ -20,8 +20,11 @@ from app.database.models import (
 )
 from app.integrations.policy_system.source import PolicySource
 from app.schemas.policy import (
+    PolicyApiContact,
     PolicyApiDisplaySchemaField,
+    PolicyApiPhone,
     PolicyApiPolicy,
+    PolicyApiRetrieveResponse,
     PolicyApiSearchResponse,
     PolicyApiSearchResult,
 )
@@ -199,7 +202,7 @@ class MySQLPolicyRepository(PolicySource):
         lob: str,
         org_external_id: str,
         suborg_external_id: str | None = None,
-        search_fields: dict[str, Any] | None = None,
+        policy_number: str | None = None,
     ) -> PolicyApiSearchResponse:
         """Searches policies matching line of business and organization parameters in MySQL."""
         try:
@@ -213,62 +216,32 @@ class MySQLPolicyRepository(PolicySource):
                         PolicyModel.sub_organization_external_id == suborg_external_id
                     )
 
+                if policy_number is not None and policy_number.strip():
+                    clean_pol_num = policy_number.strip().lower()
+                    stmt = stmt.where(func.lower(PolicyModel.policy_number).contains(clean_pol_num))
+
                 policies = list(session.scalars(stmt).all())
 
                 results: list[PolicyApiSearchResult] = []
                 display_schema: list[PolicyApiDisplaySchemaField] = DEFAULT_DISPLAY_SCHEMA
 
                 for policy in policies:
-                    # Apply organization-configured search filters if passed
-                    if search_fields:
-                        match = True
-                        for field_key, field_val in search_fields.items():
-                            if field_val is None:
-                                continue
-                            str_val = str(field_val).strip().lower()
-                            if field_key == "policy_number":
-                                if str_val not in policy.policy_number.lower():
-                                    match = False
-                                    break
-                            elif field_key in ("first_name", "last_name", "company_name"):
-                                found = False
-                                for c in policy.contacts:
-                                    if (
-                                        (c.first_name and str_val in c.first_name.lower())
-                                        or (c.last_name and str_val in c.last_name.lower())
-                                        or (c.company_name and str_val in c.company_name.lower())
-                                    ):
-                                        found = True
-                                        break
-                                if not found:
-                                    match = False
-                                    break
-                            elif (
-                                field_key == "effective_date"
-                                and str_val not in policy.effective_date.lower()
-                            ):
-                                match = False
-                                break
-                        if not match:
-                            continue
-
-                    # Determine policy holder display name
-                    holder_name = "N/A"
+                    # Determine insured display name
+                    insured_name = "N/A"
                     for contact in policy.contacts:
                         if contact.ref_id == policy.policy_holder_contact_ref_id:
                             if contact.is_company and contact.company_name:
-                                holder_name = contact.company_name
+                                insured_name = contact.company_name
                             else:
                                 parts = [p for p in (contact.first_name, contact.last_name) if p]
-                                holder_name = " ".join(parts) if parts else "Unknown"
+                                insured_name = " ".join(parts) if parts else "Unknown"
                             break
 
                     display_fields: dict[str, Any] = {
                         "policy_number": policy.policy_number,
-                        "policy_holder": holder_name,
+                        "insured_name": insured_name,
                         "effective_date": policy.effective_date,
                         "expiration_date": policy.expiration_date,
-                        "lob": policy.lob,
                     }
 
                     # Generate and persist opaque retrieval token
@@ -289,6 +262,173 @@ class MySQLPolicyRepository(PolicySource):
             logger.error("Database failure during search_policies: %s", e)
             raise DatabaseError(
                 message=f"Database search failed: {e}",
+                code="DATABASE_ERROR",
+                status_code=500,
+            ) from e
+
+    def _model_to_policy_schema(self, policy: PolicyModel) -> PolicyApiPolicy:
+        """Converts a database PolicyModel into a canonical PolicyApiPolicy schema."""
+        contacts: list[PolicyApiContact] = []
+        for c in policy.contacts:
+            phones = [
+                PolicyApiPhone(
+                    phone_number=p.phone_number,
+                    phone_type=p.phone_type,
+                )
+                for p in c.phones
+            ]
+            contacts.append(
+                PolicyApiContact(
+                    ref_id=c.ref_id,
+                    external_id=c.external_id,
+                    is_company=c.is_company,
+                    company_name=c.company_name,
+                    first_name=c.first_name,
+                    middle_name=c.middle_name,
+                    last_name=c.last_name,
+                    phones=phones,
+                    address1=c.address1,
+                    address2=c.address2,
+                    city=c.city,
+                    state=c.state,
+                    zipcode=c.zipcode,
+                    country=c.country,
+                )
+            )
+
+        policy_dict: dict[str, Any] = {
+            "version": policy.version,
+            "external_id": policy.external_id,
+            "policy_number": policy.policy_number,
+            "effective_date": policy.effective_date,
+            "expiration_date": policy.expiration_date,
+            "policy_holder_contact_ref_id": policy.policy_holder_contact_ref_id,
+            "contacts": contacts,
+            "lob": policy.lob,
+            "retroactive_date": policy.retroactive_date,
+            "cancelled_date": policy.cancelled_date,
+            "effective_time": policy.effective_time,
+            "expiration_time": policy.expiration_time,
+            "cancelled_time": policy.cancelled_time,
+            "retroactive_time": policy.retroactive_time,
+            "sub_organization_external_id": policy.sub_organization_external_id,
+            "is_claims_made": policy.is_claims_made,
+            "runoff_provision": policy.runoff_provision,
+        }
+        return PolicyApiPolicy.model_validate(policy_dict)
+
+    async def retrieve_policy_by_token(self, retrieval_token: str) -> PolicyApiRetrieveResponse:
+        """Retrieves a complete policy record associated with an opaque retrieval token."""
+        try:
+            with self.session_factory() as session:
+                token_record = session.scalar(
+                    select(RetrievalTokenModel).where(RetrievalTokenModel.token == retrieval_token)
+                )
+                if not token_record:
+                    raise PolicyNotFoundError(
+                        f"Policy retrieval token '{retrieval_token}' not found"
+                    )
+
+                policy_model = session.scalar(
+                    select(PolicyModel).where(
+                        PolicyModel.external_id == token_record.policy_external_id
+                    )
+                )
+                if not policy_model:
+                    raise PolicyNotFoundError(
+                        f"Policy with external_id '{token_record.policy_external_id}' not found for token"
+                    )
+
+                policy_schema = self._model_to_policy_schema(policy_model)
+                return PolicyApiRetrieveResponse(policy=policy_schema)
+        except PolicyNotFoundError:
+            raise
+        except SQLAlchemyError as e:
+            logger.error("Database failure during retrieve_policy_by_token: %s", e)
+            raise DatabaseError(
+                message=f"Database retrieval failed: {e}",
+                code="DATABASE_ERROR",
+                status_code=500,
+            ) from e
+
+    @staticmethod
+    def _is_in_force_on_date(policy: PolicyModel, date_of_loss: str) -> bool:
+        """Determines whether a policy was in force on the supplied date of loss."""
+        # Claims-made retroactive date check
+        if (
+            policy.is_claims_made
+            and policy.retroactive_date
+            and date_of_loss < policy.retroactive_date
+        ):
+            return False
+
+        # Effective date check
+        if date_of_loss < policy.effective_date:
+            return False
+
+        # Cancellation date check
+        if policy.cancelled_date and date_of_loss > policy.cancelled_date:
+            return False
+
+        # Expiration date check
+        return date_of_loss <= policy.expiration_date
+
+    async def retrieve_policy_by_external_id(
+        self,
+        external_id: str,
+        policy_number: str,
+        date_of_loss: str,
+        claim_number: str,
+        lob: str,
+        org_external_id: str,
+        suborg_external_id: str,
+    ) -> PolicyApiRetrieveResponse:
+        """Retrieves policy by external ID and date of loss from MySQL mock tables."""
+        try:
+            with self.session_factory() as session:
+                # 1. Look up policy by external_id
+                policy = session.scalar(
+                    select(PolicyModel).where(PolicyModel.external_id == external_id)
+                )
+                if not policy:
+                    raise PolicyNotFoundError(f"Policy with external_id '{external_id}' not found")
+
+                # 2. Validate context parameters
+                if policy.policy_number != policy_number:
+                    raise PolicyNotFoundError(
+                        f"Policy number '{policy_number}' does not match policy with external_id '{external_id}'"
+                    )
+
+                if policy.lob.lower() != lob.lower():
+                    raise PolicyNotFoundError(
+                        f"Line of business '{lob}' does not match policy with external_id '{external_id}'"
+                    )
+
+                if policy.org_external_id != org_external_id:
+                    raise PolicyNotFoundError(
+                        f"Organization '{org_external_id}' does not match policy with external_id '{external_id}'"
+                    )
+
+                if policy.sub_organization_external_id != suborg_external_id:
+                    raise PolicyNotFoundError(
+                        f"Sub-organization '{suborg_external_id}' does not match policy with external_id '{external_id}'"
+                    )
+
+                # 3. Validate in-force status for date_of_loss
+                if not self._is_in_force_on_date(policy, date_of_loss):
+                    raise PolicyNotFoundError(
+                        f"Policy '{external_id}' was not in force on date of loss '{date_of_loss}' "
+                        f"(effective: {policy.effective_date}, expiration: {policy.expiration_date})"
+                    )
+
+                policy_schema = self._model_to_policy_schema(policy)
+                return PolicyApiRetrieveResponse(policy=policy_schema)
+        except PolicyNotFoundError:
+            raise
+        except SQLAlchemyError as e:
+            logger.error("Database failure during retrieve_policy_by_external_id: %s", e)
+            raise DatabaseError(
+                message=f"Database retrieval failed: {e}",
                 code="DATABASE_ERROR",
                 status_code=500,
             ) from e

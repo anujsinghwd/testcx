@@ -7,8 +7,8 @@ info:
 paths:
   /policies/search:
     get:
-      summary: Search policies (Five Sigma v2)
-      description: Search policies by Line of Business, organization external ID, and optional search fields.
+      summary: Search policies via GET (Five Sigma v2)
+      description: Search policies by Line of Business, organization external ID, and optional search fields via query parameters.
       security:
         - ApiKeyAuth: []
       parameters:
@@ -30,6 +30,12 @@ paths:
           schema:
             type: string
           description: Sub-organization external ID
+        - name: policy_number
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Organization-configured search field (optional)
       responses:
         "200":
           description: Search results with display schema and opaque retrieval tokens
@@ -39,8 +45,132 @@ paths:
                 $ref: "#/components/schemas/PolicyApiSearchResponse"
         "401":
           description: Missing or invalid API key
+        "404":
+          description: Resource not found
         "422":
           description: Missing required search parameters
+        "500":
+          description: Internal or database failure
+
+    post:
+      summary: Search policies via POST (Five Sigma v2)
+      description: Search policies by Line of Business, organization external ID, and optional search fields via JSON request body.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicySearchRequest"
+      responses:
+        "200":
+          description: Search results with display schema and opaque retrieval tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyApiSearchResponse"
+        "401":
+          description: Missing or invalid API key
+        "404":
+          description: Resource not found
+        "422":
+          description: Validation error in request body
+        "500":
+          description: Internal or database failure
+
+  /policies/retrieve_by_token:
+    get:
+      summary: Retrieve policy by token (Five Sigma v2)
+      description: Retrieve complete policy details associated with an opaque retrieval token previously issued during Policy Search.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: retrieval_token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Opaque retrieval token issued by Policy Search
+      responses:
+        "200":
+          description: Complete policy details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyApiRetrieveResponse"
+        "401":
+          description: Missing or invalid API key
+        "404":
+          description: Policy retrieval token not found
+        "422":
+          description: Missing required retrieval_token parameter
+        "500":
+          description: Internal or database failure
+
+  /policies/retrieve_by_external_id:
+    get:
+      summary: Retrieve policy by external ID (Five Sigma v2)
+      description: Retrieve the policy as it existed on the supplied date_of_loss using its external ID, policy number, line of business, and organization context.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: external_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: External ID of the policy
+        - name: policy_number
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Policy number
+        - name: date_of_loss
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Date of loss in YYYY-MM-DD format
+        - name: claim_number
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Five Sigma claim number reference
+        - name: lob
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Line of business
+        - name: org_external_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Five Sigma organization external ID
+        - name: suborg_external_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Sub-organization external ID
+      responses:
+        "200":
+          description: Policy successfully retrieved on date of loss
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyApiRetrieveResponse"
+        "401":
+          description: Missing or invalid API key
+        "404":
+          description: Policy or matching version not found on date of loss
+        "422":
+          description: Missing or invalid required query parameters
         "500":
           description: Internal or database failure
 
@@ -52,6 +182,176 @@ components:
       name: X-API-Key
 
   schemas:
+    PolicyApiAddress:
+      type: object
+      properties:
+        address1:
+          type: string
+          nullable: true
+        address2:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        zipcode:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+
+    PolicyApiPhone:
+      type: object
+      required:
+        - phone_number
+      properties:
+        phone_number:
+          type: string
+        phone_type:
+          type: string
+          nullable: true
+
+    PolicyApiContact:
+      type: object
+      required:
+        - ref_id
+      properties:
+        ref_id:
+          type: string
+        external_id:
+          type: string
+          nullable: true
+        is_company:
+          type: boolean
+          default: false
+        company_name:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+          nullable: true
+        middle_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        phones:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyApiPhone"
+        address1:
+          type: string
+          nullable: true
+        address2:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        zipcode:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+
+    PolicyApiPolicy:
+      type: object
+      required:
+        - version
+        - external_id
+        - policy_number
+        - effective_date
+        - expiration_date
+        - policy_holder_contact_ref_id
+        - contacts
+        - lob
+      properties:
+        version:
+          type: integer
+          default: 1
+        external_id:
+          type: string
+        policy_number:
+          type: string
+        effective_date:
+          type: string
+        expiration_date:
+          type: string
+        policy_holder_contact_ref_id:
+          type: string
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyApiContact"
+        lob:
+          type: string
+        retroactive_date:
+          type: string
+          nullable: true
+        cancelled_date:
+          type: string
+          nullable: true
+        effective_time:
+          type: string
+          nullable: true
+        expiration_time:
+          type: string
+          nullable: true
+        cancelled_time:
+          type: string
+          nullable: true
+        retroactive_time:
+          type: string
+          nullable: true
+        sub_organization_external_id:
+          type: string
+          nullable: true
+        is_claims_made:
+          type: boolean
+          nullable: true
+        runoff_provision:
+          type: string
+          nullable: true
+
+    PolicyApiRetrieveResponse:
+      type: object
+      required:
+        - policy
+      properties:
+        policy:
+          $ref: "#/components/schemas/PolicyApiPolicy"
+
+    PolicySearchRequest:
+      type: object
+      required:
+        - lob
+        - org_external_id
+      properties:
+        lob:
+          type: string
+          description: Line of business. Exactly one value.
+        org_external_id:
+          type: string
+          description: External ID of the Five Sigma organization.
+        suborg_external_id:
+          type: string
+          nullable: true
+          description: Sub-organization external ID.
+        policy_number:
+          type: string
+          nullable: true
+          description: Optional organization-configured search field.
+      additionalProperties: true
+
     PolicyApiDisplaySchemaField:
       type: object
       required:
@@ -75,7 +375,8 @@ components:
       properties:
         display_fields:
           type: object
-          additionalProperties: true
+          additionalProperties:
+            type: string
         retrieval_token:
           type: string
 
@@ -88,6 +389,7 @@ components:
       properties:
         total_results:
           type: integer
+          minimum: 0
         display_schema:
           type: array
           items:

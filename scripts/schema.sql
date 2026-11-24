@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS policies (
     policy_number VARCHAR(64) NOT NULL,
     lob VARCHAR(32) NOT NULL,
     org_external_id VARCHAR(64) NOT NULL,
-    suborg_external_id VARCHAR(64) NULL,
+    sub_organization_external_id VARCHAR(64) NULL,
     effective_date VARCHAR(32) NOT NULL,
     expiration_date VARCHAR(32) NOT NULL,
     policy_holder_contact_ref_id VARCHAR(64) NOT NULL,
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS policies (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_policies_policy_number (policy_number),
+    INDEX idx_policies_suborg (sub_organization_external_id),
     INDEX idx_policies_lob_org (lob, org_external_id),
     INDEX idx_policies_search_composite (lob, org_external_id, policy_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

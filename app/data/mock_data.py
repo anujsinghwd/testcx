@@ -5,34 +5,29 @@ Contains approved mock policy records and default display schema definitions.
 
 from typing import Any
 
-from app.schemas.policy import PolicyApiDisplaySchemaField
+from app.schemas.policy import DisplayFieldType, PolicyApiDisplaySchemaField
 
 # Standard Five Sigma v2 display schema for policy search
 DEFAULT_DISPLAY_SCHEMA: list[PolicyApiDisplaySchemaField] = [
     PolicyApiDisplaySchemaField(
         id="policy_number",
         desc="Policy Number",
-        type="string",
+        type=DisplayFieldType.STRING,
     ),
     PolicyApiDisplaySchemaField(
-        id="policy_holder",
-        desc="Policy Holder",
-        type="string",
+        id="insured_name",
+        desc="Insured",
+        type=DisplayFieldType.STRING,
     ),
     PolicyApiDisplaySchemaField(
         id="effective_date",
         desc="Effective Date",
-        type="date",
+        type=DisplayFieldType.DATE,
     ),
     PolicyApiDisplaySchemaField(
         id="expiration_date",
         desc="Expiration Date",
-        type="date",
-    ),
-    PolicyApiDisplaySchemaField(
-        id="lob",
-        desc="Line of Business",
-        type="string",
+        type=DisplayFieldType.DATE,
     ),
 ]
 

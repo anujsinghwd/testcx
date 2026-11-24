@@ -198,19 +198,17 @@ curl -X GET "http://localhost:8000/policies/search?lob=GL&org_external_id=BHSI-O
   "total_results": 1,
   "display_schema": [
     {"id": "policy_number", "desc": "Policy Number", "type": "string"},
-    {"id": "policy_holder", "desc": "Policy Holder", "type": "string"},
+    {"id": "insured_name", "desc": "Insured", "type": "string"},
     {"id": "effective_date", "desc": "Effective Date", "type": "date"},
-    {"id": "expiration_date", "desc": "Expiration Date", "type": "date"},
-    {"id": "lob", "desc": "Line of Business", "type": "string"}
+    {"id": "expiration_date", "desc": "Expiration Date", "type": "date"}
   ],
   "results": [
     {
       "display_fields": {
         "policy_number": "BHSI-GL-2024-001",
-        "policy_holder": "Acme Corporation",
+        "insured_name": "Acme Corporation",
         "effective_date": "2024-01-01",
-        "expiration_date": "2025-01-01",
-        "lob": "GL"
+        "expiration_date": "2025-01-01"
       },
       "retrieval_token": "9fyFmD8GCVo8VAE4-ZP_Kk4wLqtRbIGbuWc60JTTuHg"
     }
@@ -220,7 +218,185 @@ curl -X GET "http://localhost:8000/policies/search?lob=GL&org_external_id=BHSI-O
 
 ---
 
-## 8. Quality Gates & Testing
+### `POST /policies/search` (and `/api/v1/policies/search`)
+
+- **Security:** `X-API-Key` header.
+- **Content-Type:** `application/json`
+- **Required Body Fields:**
+  - `lob` *(string)*: Line of Business (exactly one).
+  - `org_external_id` *(string)*: Five Sigma organization external ID.
+- **Optional Body Fields:**
+  - `suborg_external_id` *(string)*: Sub-organization external ID.
+  - `policy_number` *(string)*: Organization-configured search field.
+
+#### Example Request:
+```bash
+curl -X POST "http://localhost:8000/policies/search" \
+  -H "X-API-Key: test-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lob": "GL",
+    "org_external_id": "BHSI-ORG-01",
+    "suborg_external_id": "BHSI-SUB-01",
+    "policy_number": "BHSI-GL-2024-001"
+  }'
+```
+
+#### Example Response (`HTTP 200 OK`):
+```json
+{
+  "total_results": 1,
+  "display_schema": [
+    {"id": "policy_number", "desc": "Policy Number", "type": "string"},
+    {"id": "insured_name", "desc": "Insured", "type": "string"},
+    {"id": "effective_date", "desc": "Effective Date", "type": "date"},
+    {"id": "expiration_date", "desc": "Expiration Date", "type": "date"}
+  ],
+  "results": [
+    {
+      "display_fields": {
+        "policy_number": "BHSI-GL-2024-001",
+        "insured_name": "Acme Corporation",
+        "effective_date": "2024-01-01",
+        "expiration_date": "2025-01-01"
+      },
+      "retrieval_token": "9fyFmD8GCVo8VAE4-ZP_Kk4wLqtRbIGbuWc60JTTuHg"
+    }
+  ]
+}
+```
+
+---
+
+## 8. Policy Retrieval API Specification
+
+### `GET /policies/retrieve_by_token` (and `/api/v1/policies/retrieve_by_token`)
+
+Retrieves the complete policy associated with an opaque `retrieval_token` issued during Policy Search.
+
+- **Security:** `X-API-Key` header.
+- **HTTP Method:** `GET` only.
+- **Required Query Parameters:**
+  - `retrieval_token` *(string)*: Opaque token issued during policy search.
+
+#### Example Request:
+```bash
+curl -X GET "http://localhost:8000/policies/retrieve_by_token?retrieval_token=9fyFmD8GCVo8VAE4-ZP_Kk4wLqtRbIGbuWc60JTTuHg" \
+  -H "X-API-Key: test-api-key"
+```
+
+#### Example Response (`HTTP 200 OK`):
+```json
+{
+  "policy": {
+    "version": 1,
+    "external_id": "POL-BHSI-001",
+    "policy_number": "BHSI-GL-2024-001",
+    "effective_date": "2024-01-01",
+    "expiration_date": "2025-01-01",
+    "policy_holder_contact_ref_id": "CNT-001",
+    "lob": "GL",
+    "sub_organization_external_id": "BHSI-SUB-01",
+    "is_claims_made": false,
+    "contacts": [
+      {
+        "ref_id": "CNT-001",
+        "external_id": "CUST-001",
+        "is_company": true,
+        "company_name": "Acme Corporation",
+        "phones": [
+          {
+            "phone_number": "+1-800-555-0100",
+            "phone_type": "work"
+          }
+        ],
+        "address1": "100 Financial Way",
+        "address2": "Suite 500",
+        "city": "Boston",
+        "state": "MA",
+        "zipcode": "02110",
+        "country": "USA"
+      }
+    ]
+  }
+}
+```
+
+#### Error Responses:
+- **`401 Unauthorized`**: Missing or invalid `X-API-Key` header.
+- **`404 Not Found`**: Retrieval token does not exist or associated policy not found.
+- **`422 Unprocessable Entity`**: Missing required `retrieval_token` query parameter.
+- **`500 Internal Server Error`**: Database or repository failure.
+
+---
+
+### `GET /policies/retrieve_by_external_id` (and `/api/v1/policies/retrieve_by_external_id`)
+
+Retrieves the policy in force on the specified `date_of_loss` using its `external_id`, `policy_number`, `claim_number`, and organization scope.
+
+- **Security:** `X-API-Key` header.
+- **HTTP Method:** `GET` only.
+- **Required Query Parameters:**
+  - `external_id` *(string)*: External ID of the policy.
+  - `policy_number` *(string)*: Policy number.
+  - `date_of_loss` *(string)*: Date of loss in `YYYY-MM-DD` format.
+  - `claim_number` *(string)*: Five Sigma claim number reference.
+  - `lob` *(string)*: Line of Business.
+  - `org_external_id` *(string)*: Five Sigma organization external ID.
+  - `suborg_external_id` *(string)*: Sub-organization external ID.
+
+#### Example Request:
+```bash
+curl -X GET "http://localhost:8000/policies/retrieve_by_external_id?external_id=POL-BHSI-001&policy_number=BHSI-GL-2024-001&date_of_loss=2024-06-15&claim_number=CLM-001&lob=GL&org_external_id=BHSI-ORG-01&suborg_external_id=BHSI-SUB-01" \
+  -H "X-API-Key: test-api-key"
+```
+
+#### Example Response (`HTTP 200 OK`):
+```json
+{
+  "policy": {
+    "version": 1,
+    "external_id": "POL-BHSI-001",
+    "policy_number": "BHSI-GL-2024-001",
+    "effective_date": "2024-01-01",
+    "expiration_date": "2025-01-01",
+    "policy_holder_contact_ref_id": "CNT-001",
+    "lob": "GL",
+    "sub_organization_external_id": "BHSI-SUB-01",
+    "is_claims_made": false,
+    "contacts": [
+      {
+        "ref_id": "CNT-001",
+        "external_id": "CUST-001",
+        "is_company": true,
+        "company_name": "Acme Corporation",
+        "phones": [
+          {
+            "phone_number": "+1-800-555-0100",
+            "phone_type": "work"
+          }
+        ],
+        "address1": "100 Financial Way",
+        "address2": "Suite 500",
+        "city": "Boston",
+        "state": "MA",
+        "zipcode": "02110",
+        "country": "USA"
+      }
+    ]
+  }
+}
+```
+
+#### Error Responses:
+- **`401 Unauthorized`**: Missing or invalid `X-API-Key` header.
+- **`404 Not Found`**: Policy not found, parameter mismatch, or policy was not in force on `date_of_loss`.
+- **`422 Unprocessable Entity`**: Missing required query parameters or invalid date format.
+- **`500 Internal Server Error`**: Database or repository failure.
+
+---
+
+## 9. Quality Gates & Testing
 
 Run all automated checks:
 
