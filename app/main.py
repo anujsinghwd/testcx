@@ -20,11 +20,6 @@ app.add_middleware(CorrelationIdMiddleware)
 # Register centralized error handlers
 register_error_handlers(app)
 
-# Include API router
+# Include API router (mounted at both /api/v1/policies and /policies)
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(policy_router, prefix="/policies", tags=["Policies"])
-
-
-@app.get("/health", tags=["Health"])
-async def root_health_check() -> dict[str, str]:
-    return {"status": "healthy"}

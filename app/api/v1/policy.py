@@ -1,50 +1,41 @@
-"""Policy API route definitions (structure and function signatures only)."""
+"""Policy API route definitions implementing Five Sigma v2 Policy Search."""
 
-from typing import Any
+from fastapi import APIRouter, Depends, Query, Request, Security
 
-from fastapi import APIRouter
-
-from app.schemas.policy import CoverageResponse, PolicyResponse, PolicySearchRequest
+from app.core.auth import verify_api_key
+from app.dependencies.clients import get_policy_service
+from app.schemas.policy import PolicyApiSearchResponse
+from app.services.policy_service import PolicyService
 
 router = APIRouter()
 
 
-@router.post(
+@router.get(
     "/search",
-    summary="Search policies",
-    description="Search for policies matching criteria. Processing: TBC.",
+    response_model=PolicyApiSearchResponse,
+    summary="Search policies (Five Sigma v2)",
+    description=(
+        "Search policies matching Line of Business and Organization criteria. "
+        "Returns display schema and policy items with opaque retrieval tokens."
+    ),
 )
-async def search_policies(request: PolicySearchRequest | None = None) -> Any:
-    """Route definition for policy search.
+async def search_policies(
+    request: Request,
+    lob: str = Query(..., description="Line of business (required, exactly one)"),
+    org_external_id: str = Query(..., description="Organization external ID (required)"),
+    suborg_external_id: str | None = Query(
+        None, description="Sub-organization external ID (optional)"
+    ),
+    service: PolicyService = Depends(get_policy_service),
+    _api_key: str = Security(verify_api_key),
+) -> PolicyApiSearchResponse:
+    """GET /policies/search endpoint consumed by Five Sigma during FNOL."""
+    standard_params = {"lob", "org_external_id", "suborg_external_id"}
+    search_fields = {k: v for k, v in request.query_params.items() if k not in standard_params}
 
-    Implementation: TBC.
-    """
-    pass
-
-
-@router.get(
-    "/{id}",
-    response_model=PolicyResponse,
-    summary="Get policy detail",
-    description="Retrieve details for a specific policy. Processing: TBC.",
-)
-async def get_policy(id: str) -> Any:
-    """Route definition for policy detail retrieval.
-
-    Implementation: TBC.
-    """
-    pass
-
-
-@router.get(
-    "/{id}/coverages",
-    response_model=CoverageResponse,
-    summary="Get policy coverages",
-    description="Retrieve coverages for a specific policy. Processing: TBC.",
-)
-async def get_coverages(id: str) -> Any:
-    """Route definition for coverage retrieval.
-
-    Implementation: TBC.
-    """
-    pass
+    return await service.search_policies(
+        lob=lob,
+        org_external_id=org_external_id,
+        suborg_external_id=suborg_external_id,
+        search_fields=search_fields if search_fields else None,
+    )

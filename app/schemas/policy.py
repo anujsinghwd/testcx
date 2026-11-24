@@ -1,60 +1,90 @@
-"""Policy response and request schemas.
+"""Policy schemas adhering to the Five Sigma v2 Policy Search contract."""
 
-Fields are derived strictly from confirmed policy reference requirements.
-Exact field types and JSON property names are marked TBC where unconfirmed.
-Separate canonical entities for Policy Version, Insured, Limit, Deductible,
-or Source Reference are excluded per instructions.
-"""
-
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class PolicyResponse(BaseModel):
-    """Policy response schema using strictly confirmed fields (types and property names: TBC)."""
+class PolicyApiPhone(BaseModel):
+    """Phone number record for a policy contact."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
 
-    policy_number: Any = Field(default="TBC", description="Policy Number (TBC)")
-    effective_date: Any = Field(default="TBC", description="Effective Date (TBC)")
-    expiration_date: Any = Field(default="TBC", description="Expiration Date (TBC)")
-    currency: Any = Field(default="TBC", description="Currency (TBC)")
-    policy_state: Any = Field(default="TBC", description="Policy State (TBC)")
-    policy_holder_company: Any = Field(default="TBC", description="Policy Holder Company (TBC)")
-    uw_region: Any = Field(default="TBC", description="UW Region (TBC)")
-    writing_company: Any = Field(default="TBC", description="Writing Company (TBC)")
-    booked_as_value: Any = Field(default="TBC", description="Booked As Value (TBC)")
-    product_line_uw_area: Any = Field(default="TBC", description="Product Line/UW Area (TBC)")
-    product_line_subtype: Any = Field(default="TBC", description="Product Line Subtype (TBC)")
-    section_code_name: Any = Field(default="TBC", description="Section Code Name (TBC)")
-    asl: Any = Field(default="TBC", description="ASL (TBC)")
-    class_code_iso: Any = Field(default="TBC", description="Class Code (ISO) (TBC)")
-    subline_iso: Any = Field(default="TBC", description="Subline (ISO) (TBC)")
-    deductible_codes_iso: Any = Field(default="TBC", description="Deductible Codes (ISO) (TBC)")
-    primary_involved_location_detail_iso: Any = Field(
-        default="TBC", description="Primary Involved Location Detail (ISO) (TBC)"
-    )
-
-    # Document information shown in screenshot (Coverage used instead of Line)
-    coverage_exposure: Any = Field(default="TBC", description="Coverage/Exposure (TBC)")
-    limits_retentions: Any = Field(default="TBC", description="Limits, Retentions (TBC)")
-    dates_retro_tail: Any = Field(default="TBC", description="Dates, Retro Tail (TBC)")
+    phone_number: str
+    phone_type: str | None = None
 
 
-class PolicySearchRequest(BaseModel):
-    """Policy search request payload (criteria fields: TBC)."""
+class PolicyApiContact(BaseModel):
+    """Contact record for a policy (individual or company)."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
 
-    criteria: Any = Field(default="TBC", description="Search criteria (TBC)")
+    ref_id: str
+    external_id: str | None = None
+    is_company: bool = False
+    company_name: str | None = None
+    first_name: str | None = None
+    middle_name: str | None = None
+    last_name: str | None = None
+    phones: list[PolicyApiPhone] = Field(default_factory=list)
+    address1: str | None = None
+    address2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zipcode: str | None = None
+    country: str | None = None
 
 
-class CoverageResponse(BaseModel):
-    """Policy coverage response payload (fields: TBC)."""
+class PolicyApiPolicy(BaseModel):
+    """Full policy model stored in the repository and used to build search display fields."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
 
-    coverage_exposure: Any = Field(default="TBC", description="Coverage/Exposure (TBC)")
-    limits_retentions: Any = Field(default="TBC", description="Limits, Retentions (TBC)")
-    dates_retro_tail: Any = Field(default="TBC", description="Dates, Retro Tail (TBC)")
+    version: int = 1
+    external_id: str
+    policy_number: str
+    effective_date: str
+    expiration_date: str
+    policy_holder_contact_ref_id: str
+    contacts: list[PolicyApiContact] = Field(min_length=1)
+    lob: str
+
+    # Optional fields
+    retroactive_date: str | None = None
+    cancelled_date: str | None = None
+    effective_time: str | None = None
+    expiration_time: str | None = None
+    cancelled_time: str | None = None
+    retroactive_time: str | None = None
+    sub_organization_external_id: str | None = None
+    is_claims_made: bool | None = None
+    runoff_provision: str | None = None
+
+
+class PolicyApiDisplaySchemaField(BaseModel):
+    """Schema descriptor for a search result display column."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    desc: str
+    type: Literal["string", "date", "select"] | str
+
+
+class PolicyApiSearchResult(BaseModel):
+    """Individual search result item containing display values and retrieval token."""
+
+    model_config = ConfigDict(extra="allow")
+
+    display_fields: dict[str, Any]
+    retrieval_token: str
+
+
+class PolicyApiSearchResponse(BaseModel):
+    """Response model for the GET /policies/search endpoint."""
+
+    model_config = ConfigDict(extra="allow")
+
+    total_results: int
+    display_schema: list[PolicyApiDisplaySchemaField]
+    results: list[PolicyApiSearchResult]

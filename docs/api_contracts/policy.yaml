@@ -1,123 +1,98 @@
 openapi: 3.0.3
 info:
-  title: Policy API Contract
-  version: 1.0.0
-  description: Policy Integration API contract (Adapter Pattern - Duck Creek initial). Details marked TBC where unconfirmed.
+  title: Policy Search API Contract (Five Sigma v2)
+  version: 2.0.0
+  description: Policy Integration Service contract for Five Sigma FNOL policy search.
 
 paths:
   /policies/search:
-    post:
-      summary: Search policies
-      description: Search policies based on criteria (TBC).
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              description: Search criteria (TBC)
-      responses:
-        "200":
-          description: Search results (TBC)
-
-  /policies/{id}:
     get:
-      summary: Get policy detail
-      description: Retrieve details for a specific policy.
+      summary: Search policies (Five Sigma v2)
+      description: Search policies by Line of Business, organization external ID, and optional search fields.
+      security:
+        - ApiKeyAuth: []
       parameters:
-        - name: id
-          in: path
+        - name: lob
+          in: query
           required: true
           schema:
             type: string
-          description: Policy identifier
+          description: Line of business (exactly one)
+        - name: org_external_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Organization external ID
+        - name: suborg_external_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Sub-organization external ID
       responses:
         "200":
-          description: Policy detail response
+          description: Search results with display schema and opaque retrieval tokens
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PolicyResponse"
-
-  /policies/{id}/coverages:
-    get:
-      summary: Get policy coverages
-      description: Retrieve coverage details for a specific policy.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Policy identifier
-      responses:
-        "200":
-          description: Coverage details response (TBC)
+                $ref: "#/components/schemas/PolicyApiSearchResponse"
+        "401":
+          description: Missing or invalid API key
+        "422":
+          description: Missing required search parameters
+        "500":
+          description: Internal or database failure
 
 components:
-  schemas:
-    PolicyResponse:
-      type: object
-      description: Policy response using strictly confirmed fields (types and property names TBC)
-      properties:
-        Policy Number:
-          type: string
-          description: TBC
-        Effective Date:
-          type: string
-          description: TBC
-        Expiration Date:
-          type: string
-          description: TBC
-        Currency:
-          type: string
-          description: TBC
-        Policy State:
-          type: string
-          description: TBC
-        Policy Holder Company:
-          type: string
-          description: TBC
-        UW Region:
-          type: string
-          description: TBC
-        Writing Company:
-          type: string
-          description: TBC
-        Booked As Value:
-          type: string
-          description: TBC
-        Product Line/UW Area:
-          type: string
-          description: TBC
-        Product Line Subtype:
-          type: string
-          description: TBC
-        Section Code Name:
-          type: string
-          description: TBC
-        ASL:
-          type: string
-          description: TBC
-        Class Code (ISO):
-          type: string
-          description: TBC
-        Subline (ISO):
-          type: string
-          description: TBC
-        Deductible Codes (ISO):
-          type: string
-          description: TBC
-        Primary Involved Location Detail (ISO):
-          type: string
-          description: TBC
-        Coverage/Exposure:
-          type: string
-          description: TBC
-        Limits, Retentions:
-          type: string
-          description: TBC
-        Dates, Retro Tail:
-          type: string
-          description: TBC
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
 
+  schemas:
+    PolicyApiDisplaySchemaField:
+      type: object
+      required:
+        - id
+        - desc
+        - type
+      properties:
+        id:
+          type: string
+        desc:
+          type: string
+        type:
+          type: string
+          enum: [string, date, select]
+
+    PolicyApiSearchResult:
+      type: object
+      required:
+        - display_fields
+        - retrieval_token
+      properties:
+        display_fields:
+          type: object
+          additionalProperties: true
+        retrieval_token:
+          type: string
+
+    PolicyApiSearchResponse:
+      type: object
+      required:
+        - total_results
+        - display_schema
+        - results
+      properties:
+        total_results:
+          type: integer
+        display_schema:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyApiDisplaySchemaField"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyApiSearchResult"

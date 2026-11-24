@@ -1,294 +1,237 @@
-# Five Sigma – BHSI Integration Platform
+# Five Sigma – BHSI Policy Search Integration Platform
 
 > 📚 **Documentation Links:**
 > - 🚀 **[Developer Setup Guide](setup.md)**: 5-minute setup, virtual environment, and daily commands.
-> - 🧠 **[Architecture & Understanding Guide](Understand.md)**: Plain-English explanation of layers, the Adapter Pattern, and workflows.
+> - 🧠 **[Architecture & Understanding Guide](Understand.md)**: Simplified walkthrough of the Policy Search API architecture.
+> - 🤖 **[ChatGPT / LLM Handover Guide](undestand.md)**: Concise context, constraints, and confirmed models for AI coding assistants.
+
+---
 
 ## 1. Project Overview
 
-### Introduction
+The **Five Sigma BHSI Integration Platform** is a streamlined FastAPI integration middleware connecting the Five Sigma Claims Management Platform with Policy Administration Systems (PAS).
 
-The **Five Sigma BHSI Integration Platform** is a FastAPI-based integration middleware connecting the Five Sigma Claims Management Platform with BHSI's external enterprise systems and Policy Administration Systems (PAS).
-
-The application exposes RESTful APIs, validates data, coordinates integration workflows, and abstracts external system communication through modular integration adapters.
-
-**Current Policy System Status:**
-- Rebuilt using the **Adapter Pattern**.
-- **Duck Creek** is configured as the initial Policy Administration System.
-- Current phase establishes the **file structure, classes, method signatures, schemas, and API route definitions** with empty method bodies (`pass` / `raise NotImplementedError`). No business logic or external HTTP calls are implemented yet.
-
-### Primary Objectives
-
-- Centralize integration between Five Sigma and BHSI external enterprise systems.
-- Retrieve and synchronize policy information via the **Policy Adapter Pattern** (Duck Creek initial).
-- Support claim, payment, document, and webhook integration workflows.
-- Provide a consistent canonical schema for policy responses based strictly on confirmed requirements.
-- Ensure easy extensibility so future PAS systems can be introduced without altering core API workflows.
-- Enforce strict code quality via Ruff, MyPy, and Pytest.
+### Current Scope: Policy Search API Only
+- **Architecture:** `Five Sigma (FNOL) → FastAPI API → Policy Service → PolicySource Interface → MySQL Policy Repository → MySQL Database`.
+- **Search Endpoint:** `GET /policies/search` (also mounted at `/api/v1/policies/search`).
+- **Database Backend:** Relational storage using **MySQL 8.0+** and **SQLAlchemy 2.0 ORM** (tables: `policies`, `policy_contacts`, `contact_phones`, `retrieval_tokens`).
+- **Authentication:** Inbound API key authentication via `X-API-Key` HTTP header.
+- **PAS Independence:** The `PolicySource` interface ensures complete independence from the underlying database or future PAS adapters (such as Duck Creek or Socotra), allowing external systems to be replaced without changing the Five Sigma-facing API.
 
 ---
 
 ## 2. High-Level Architecture
 
-The application follows a modular, layered architecture with a clear separation of concerns.
-
-### Architecture Diagram
-
 ```mermaid
 flowchart TD
-    A["Caller / External Systems"] --> B["FastAPI Application"]
-    B --> C["API Layer (app/api/)"]
-    C --> D["Pydantic Validation (app/schemas/)"]
-    D --> E["Service Layer (app/services/)"]
-    E --> F["Policy Adapter Base (app/integrations/policy_system/base.py)"]
-    F --> G["Policy Adapter Registry (app/integrations/policy_system/registry.py)"]
-    G --> H["Duck Creek Adapter (app/integrations/policy_system/duck_creek/)"]
-    H --> I["External Policy System / Mock Data (TBC)"]
+    A["Five Sigma (FNOL Caller)"] -->|"GET /policies/search (X-API-Key)"| B["FastAPI Application (app/main.py)"]
+    B --> C["API Route (app/api/v1/policy.py)"]
+    C --> D["Policy Service (app/services/policy_service.py)"]
+    D --> E["PolicySource Interface (app/integrations/policy_system/source.py)"]
+    E --> F["MySQL Policy Repository (app/repositories/policy_repository.py)"]
+    F --> G["MySQL Database (policies, contacts, phones, tokens)"]
 
-    J["Core Config & Exceptions"] -.-> B
-    K["Shared Middleware & Logger"] -.-> B
+    H["Auth Dependency (app/core/auth.py)"] -.-> C
+    I["Centralized Error Handlers (app/core/error_handlers.py)"] -.-> B
 ```
 
-### Architecture Layers
-
-| Layer | Responsibility |
-|---|---|
-| **API Layer** (`app/api/`) | Exposes HTTP route definitions using FastAPI |
-| **Schema Layer** (`app/schemas/`) | Validates incoming and outgoing payloads using Pydantic |
-| **Service Layer** (`app/services/`) | Business workflow orchestration independent of specific providers |
-| **Integration Layer** (`app/integrations/`) | External system adapters (Policy System / Duck Creek, Documents) |
-| **Mapper Layer** (`app/mappers/`) | Dedicated transformation between provider and canonical formats |
-| **Data Layer** (`app/data/`) | Mock data structures for development and testing (values TBC) |
-| **Core Layer** (`app/core/`) | Shared configuration, security, logger, middleware, and error catalog |
-| **Dependencies** (`app/dependencies/`) | FastAPI dependency injection providers for adapters and services |
-| **Test Layer** (`tests/`) | Unit and integration test skeletons |
-
 ---
 
-## 3. Technology Stack
-
-| Technology | Purpose |
-|---|---|
-| Python 3.11+ | Primary programming language |
-| FastAPI | REST API framework |
-| Pydantic v2 | Request/response schemas and settings validation |
-| HTTPX | Asynchronous HTTP client (for real external integration) |
-| Ruff | Automated linting, code formatting, and import sorting |
-| MyPy | Static type analysis in strict mode |
-| Pytest & Pytest-Cov | Unit and integration testing |
-| Azure Functions | Cloud serverless triggers (`function_app.py`) |
-
----
-
-## 4. Project Directory Structure
+## 3. Project Directory Structure
 
 ```text
 xc/
-├── .github/
-│   └── workflows/
-│       └── quality.yml
-│
 ├── app/
-│   ├── main.py
+│   ├── main.py                         # FastAPI application entry point
 │   │
 │   ├── api/
-│   │   ├── router.py
+│   │   ├── router.py                   # Root API router
 │   │   └── v1/
-│   │       ├── health.py
-│   │       └── policy.py
+│   │       └── policy.py               # GET /policies/search route
 │   │
 │   ├── core/
-│   │   ├── config.py
-│   │   ├── error_handlers.py
-│   │   ├── exceptions.py
-│   │   ├── logger.py
-│   │   └── middleware.py
+│   │   ├── auth.py                     # Inbound API key authentication (X-API-Key)
+│   │   ├── config.py                   # Pydantic Settings & environment variables
+│   │   ├── error_handlers.py           # Centralized exception handlers
+│   │   ├── exceptions.py               # Domain exceptions (AuthenticationError, DatabaseError)
+│   │   ├── logger.py                   # Structured logging setup
+│   │   └── middleware.py               # Correlation ID middleware
 │   │
 │   ├── data/
-│   │   └── mock_data.py
+│   │   └── mock_data.py                # Approved mock policy records & display schema
+│   │
+│   ├── database/
+│   │   ├── __init__.py                 # Database module exports
+│   │   ├── connection.py               # SQLAlchemy engine & sessionmaker lifecycle
+│   │   └── models.py                   # Normalized MySQL models (policies, contacts, phones, tokens)
 │   │
 │   ├── dependencies/
-│   │   └── clients.py
+│   │   └── clients.py                  # FastAPI dependency injection providers
 │   │
 │   ├── integrations/
-│   │   ├── document_system/
 │   │   └── policy_system/
-│   │       ├── base.py
-│   │       ├── config.py
-│   │       ├── registry.py
-│   │       └── duck_creek/
-│   │           ├── adapter.py
-│   │           └── config.py
+│   │       ├── __init__.py
+│   │       └── source.py               # PolicySource abstract interface
 │   │
-│   ├── mappers/
-│   │   └── policy_mapper.py
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   └── policy_repository.py        # MySQLPolicyRepository implementation
 │   │
 │   ├── schemas/
-│   │   ├── errors.py
-│   │   └── policy.py
+│   │   ├── errors.py                   # Standard error response schemas
+│   │   └── policy.py                   # Five Sigma v2 Policy Search models
 │   │
 │   └── services/
-│       └── policy_service.py
+│       └── policy_service.py           # Decoupled PolicyService
 │
 ├── docs/
+│   ├── api_contracts/
+│   │   └── policy.yaml                 # OpenAPI 3.0 specification for GET /policies/search
 │   ├── architecture.md
-│   ├── integration_catalog.md
-│   └── api_contracts/
-│       ├── claim.yaml
-│       ├── payment.yaml
-│       └── policy.yaml
+│   └── integration_catalog.md
 │
-├── jobs/
-│   ├── payment_scheduler.py
-│   └── retry_scheduler.py
+├── scripts/
+│   ├── init_mysql_db.py                # Automated MySQL database initializer & mock seeder
+│   ├── schema.sql                      # Pure MySQL 8.0 DDL migration script
+│   ├── setup.ps1
+│   └── setup.sh
 │
 ├── tests/
-│   ├── conftest.py
+│   ├── conftest.py                     # Pytest fixtures & isolated test database setup
 │   ├── integration/
-│   │   └── test_policy_api.py
+│   │   └── test_policy_api.py          # Integration tests for GET /policies/search
 │   └── unit/
-│       ├── test_claim.py
-│       ├── test_health.py
-│       ├── test_payment.py
-│       └── test_policy.py
+│       ├── test_policy.py              # Unit tests for PolicyService
+│       └── test_policy_repository.py   # Unit tests for MySQLPolicyRepository
 │
-├── timer_function/
-│   ├── function.json
-│   └── __init__.py
-│
-├── function_app.py
-├── .env.example
-├── .gitignore
-├── pyproject.toml
-├── requirements.txt
-├── requirements-dev.txt
+├── .env.example                         # Environment configuration template
+├── pyproject.toml                       # Python project configuration (Ruff, MyPy, Pytest)
+├── requirements.txt                     # Production dependencies (FastAPI, SQLAlchemy, PyMySQL)
+├── README.md
 ├── Understand.md
-└── README.md
+└── undestand.md
 ```
 
 ---
 
-## 5. Policy Integration – Adapter Pattern
+## 4. Database Setup & Initialization
 
-The Policy Integration is designed around the **Adapter Pattern** to isolate provider-specific logic from the core business workflows.
+### 4.1 Prerequisites
+- **MySQL 8.0+** running locally, on a server, or in Docker:
+  ```bash
+  docker run --name mysql-policy-db \
+    -e MYSQL_ROOT_PASSWORD=rootpassword \
+    -e MYSQL_DATABASE=policy_db \
+    -e MYSQL_USER=policy_user \
+    -e MYSQL_PASSWORD=password \
+    -p 3306:3306 -d mysql:8.0
+  ```
 
-### 5.1 Abstract Base: `PolicyAdapterBase`
-Located at `app/integrations/policy_system/base.py`, this abstract base class defines the contract required from any Policy Administration System:
-- `search_policy(criteria: Any = None) -> Any`
-- `get_policy(policy_id: str) -> Any`
-- `get_coverages(policy_id: str) -> Any`
+### 4.2 Automated Initialization & Mock Data Seeding
+Run the provided CLI tool to create tables and seed approved mock policy records:
+```bash
+./.venv/bin/python scripts/init_mysql_db.py
+```
 
-### 5.2 Adapter Registry: `PolicyAdapterRegistry`
-Located at `app/integrations/policy_system/registry.py`, manages runtime registration and instantiation of policy system adapters.
-
-### 5.3 Duck Creek Adapter: `DuckCreekAdapter`
-Located at `app/integrations/policy_system/duck_creek/adapter.py`, implements `PolicyAdapterBase` for Duck Creek PAS. Methods are declared with empty bodies (`raise NotImplementedError` / `pass`).
-
-### 5.4 Configuration Loaders
-- `PolicySystemConfigLoader` (`app/integrations/policy_system/config.py`): Configuration loader for the general policy system.
-- `DuckCreekConfigLoader` (`app/integrations/policy_system/duck_creek/config.py`): Configuration loader for Duck Creek connection parameters.
-
----
-
-## 6. Policy Response Fields & Schemas
-
-Defined in `app/schemas/policy.py`, the `PolicyResponse` schema strictly uses only confirmed fields from the reference requirements. Separate canonical entities (such as `PolicyVersion`, `Insured`, `Limit`, `Deductible`, or `SourceReference`) are excluded.
-
-### Confirmed Fields:
-- **Policy Identification & Dates:**
-  - `Policy Number`
-  - `Effective Date`
-  - `Expiration Date`
-  - `Currency`
-  - `Policy State`
-  - `Policy Holder Company`
-- **Underwriting & Company Details:**
-  - `UW Region`
-  - `Writing Company`
-  - `Booked As Value`
-  - `Product Line/UW Area`
-  - `Product Line Subtype`
-  - `Section Code Name`
-  - `ASL`
-- **ISO Classifications & Codes:**
-  - `Class Code (ISO)`
-  - `Subline (ISO)`
-  - `Deductible Codes (ISO)`
-  - `Primary Involved Location Detail (ISO)`
-- **Document Information:**
-  - `Coverage/Exposure` (Coverage used instead of Line)
-  - `Limits, Retentions`
-  - `Dates, Retro Tail`
-
-*Note: All field data types and JSON property names are marked `TBC` pending final interface specifications.*
+### 4.3 Manual Schema Setup
+Execute the MySQL DDL script directly:
+```bash
+mysql -u policy_user -p policy_db < scripts/schema.sql
+```
 
 ---
 
-## 7. Policy API Endpoints
+## 5. Environment Configuration
 
-The API routes are defined in `app/api/v1/policy.py` with empty function bodies:
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/policies/search` | Search policies based on criteria (TBC) |
-| `GET` | `/policies/{id}` | Retrieve comprehensive details for a policy |
-| `GET` | `/policies/{id}/coverages` | Retrieve coverage information for a policy |
-| `GET` | `/health` | Application root health check |
-| `GET` | `/api/v1/health` | Versioned API health check |
-
----
-
-## 8. Error Catalog
-
-Defined in `app/core/exceptions.py`, standardized domain exceptions map to confirmed integration error codes:
-
-| Error Code | Exception Class | HTTP Status |
-|---|---|---|
-| `NOT_FOUND` | `PolicyNotFoundError` | 404 |
-| `MULTIPLE_MATCHES` | `MultiplePoliciesFoundError` | 409 |
-| `MAPPING_ERROR` | `PolicyMappingError` | 502 |
-| `PAS_UNAVAILABLE` | `PASUnavailableError` | 503 |
-| `TIMEOUT` | `PASTimeoutError` | 504 |
-
----
-
-## 9. Current Implementation Status & TBC Items
-
-The repository currently contains the **structural skeleton and signatures only**:
-- **No business logic:** Methods contain only `pass` or `raise NotImplementedError`.
-- **No HTTP API calls / mock retrieval:** No calls to external Duck Creek endpoints or database queries.
-- **No invented fields:** Only confirmed fields are declared.
-- **TBC Items:**
-  1. Duck Creek API endpoints, authentication keys, and network timeouts.
-  2. Exact JSON property naming casing (camelCase vs. snake_case) and primitive data types.
-  3. Search request filter criteria parameters.
-  4. Specific coverage response schema details.
-  5. Azure Functions trigger configuration and execution bindings in `function_app.py`.
-
----
-
-## 10. Development & Verification
-
-### Running Checks
+Create a `.env` file from `.env.example`:
 
 ```bash
-# Run Ruff linting and formatting checks
-./.venv/bin/ruff check app tests function_app.py
-./.venv/bin/ruff format --check app tests function_app.py
+APP_NAME=BHSI Policy Search Integration
+ENVIRONMENT=development
 
-# Run static type checking in strict mode
-./.venv/bin/mypy app tests function_app.py
+# Inbound API Key Authentication for Five Sigma
+API_KEY=test-api-key
+FIVE_SIGMA_INBOUND_API_KEY=test-five-sigma-key
 
-# Run Pytest suite
-./.venv/bin/pytest
+# MySQL Database Configuration
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=policy_db
+MYSQL_USER=policy_user
+MYSQL_PASSWORD=password
+DATABASE_URL=mysql+pymysql://policy_user:password@localhost:3306/policy_db
 ```
 
 ---
 
-## 11. Documentation & Guides
+## 6. Running the Application
 
-- 🚀 **[Developer Setup Guide](setup.md)**: Easy onboarding guide for setting up Python virtual environments, pre-commit hooks, and troubleshooting.
-- 🧠 **[Architecture & Understanding Guide (Understand.md)](Understand.md)**: Deep dive into the modular architecture, Adapter Pattern, Duck Creek integration, and layer responsibilities.
-- 📋 **[Policy API Contract (OpenAPI)](docs/api_contracts/policy.yaml)**: OpenAPI 3.0 specification for policy endpoints.
-- 🏗️ **[Technical Architecture Document](docs/architecture.md)**: Full platform technical architecture documentation.
+Start the FastAPI application with Uvicorn:
 
+```bash
+./.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+---
+
+## 7. Policy Search API Specification
+
+### `GET /policies/search` (and `/api/v1/policies/search`)
+
+- **Security:** `X-API-Key` header.
+- **Required Query Parameters:**
+  - `lob` *(string)*: Line of Business (exactly one, e.g. `GL`, `PROPERTY`, `EXCESS`).
+  - `org_external_id` *(string)*: Organization external ID (e.g. `BHSI-ORG-01`).
+- **Optional Query Parameters:**
+  - `suborg_external_id` *(string)*: Sub-organization external ID.
+  - *Organization-Configured Search Parameters:* Any additional filters (e.g. `policy_number`, `first_name`, `last_name`, `company_name`, `effective_date`).
+
+#### Example Request:
+```bash
+curl -X GET "http://localhost:8000/policies/search?lob=GL&org_external_id=BHSI-ORG-01&policy_number=BHSI-GL-2024-001" \
+  -H "X-API-Key: test-api-key"
+```
+
+#### Example Response (`HTTP 200 OK`):
+```json
+{
+  "total_results": 1,
+  "display_schema": [
+    {"id": "policy_number", "desc": "Policy Number", "type": "string"},
+    {"id": "policy_holder", "desc": "Policy Holder", "type": "string"},
+    {"id": "effective_date", "desc": "Effective Date", "type": "date"},
+    {"id": "expiration_date", "desc": "Expiration Date", "type": "date"},
+    {"id": "lob", "desc": "Line of Business", "type": "string"}
+  ],
+  "results": [
+    {
+      "display_fields": {
+        "policy_number": "BHSI-GL-2024-001",
+        "policy_holder": "Acme Corporation",
+        "effective_date": "2024-01-01",
+        "expiration_date": "2025-01-01",
+        "lob": "GL"
+      },
+      "retrieval_token": "9fyFmD8GCVo8VAE4-ZP_Kk4wLqtRbIGbuWc60JTTuHg"
+    }
+  ]
+}
+```
+
+---
+
+## 8. Quality Gates & Testing
+
+Run all automated checks:
+
+```bash
+# Linting & code style
+./.venv/bin/ruff check . --fix
+./.venv/bin/ruff format .
+
+# Strict static type analysis
+./.venv/bin/mypy app tests scripts
+
+# Unit and integration test suite
+./.venv/bin/pytest
+```

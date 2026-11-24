@@ -22,18 +22,38 @@ class BaseIntegrationError(Exception):
 BaseIntegrationException = BaseIntegrationError
 
 
-class PolicyNotFoundError(BaseIntegrationError):
-    """Raised when a requested policy or policy version is not found."""
+class AuthenticationError(BaseIntegrationError):
+    """Raised when an inbound request fails API key authentication."""
 
     def __init__(
         self,
-        message: str = "Policy not found",
+        message: str = "Invalid or missing API key",
+        code: str = "UNAUTHORIZED",
+        status_code: int = 401,
         details: dict[str, Any] | list[Any] | None = None,
     ) -> None:
         super().__init__(
             message=message,
-            code="NOT_FOUND",
-            status_code=404,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class PolicyNotFoundError(BaseIntegrationError):
+    """Raised when a requested policy or policy retrieval token is not found."""
+
+    def __init__(
+        self,
+        message: str = "Policy not found",
+        code: str = "NOT_FOUND",
+        status_code: int = 404,
+        details: dict[str, Any] | list[Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
             details=details,
         )
 
@@ -44,12 +64,32 @@ class MultiplePoliciesFoundError(BaseIntegrationError):
     def __init__(
         self,
         message: str = "Multiple matching policies found",
+        code: str = "MULTIPLE_MATCHES",
+        status_code: int = 409,
         details: dict[str, Any] | list[Any] | None = None,
     ) -> None:
         super().__init__(
             message=message,
-            code="MULTIPLE_MATCHES",
-            status_code=409,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class DatabaseError(BaseIntegrationError):
+    """Raised when a repository or database operation fails."""
+
+    def __init__(
+        self,
+        message: str = "Database operation failed",
+        code: str = "DATABASE_ERROR",
+        status_code: int = 500,
+        details: dict[str, Any] | list[Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
             details=details,
         )
 
